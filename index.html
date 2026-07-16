@@ -208,9 +208,8 @@
         .btn-login {
             background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
             padding: 20px;
-            margin: auto;
             border-radius: 50px;
-            width: 80%;
+            width: 100%;
             font-size: 1.3rem;
         }
 
@@ -303,7 +302,13 @@
 <body>
 
     <div id="login-screen">
-        <button class="btn-login" onclick="login()">Connect to Spotify</button>
+        <div style="margin: auto; width: 85%; text-align: center;">
+            <div id="connecting-msg" style="display: none; color: #9db0e0; font-size: 1.1rem; margin-bottom: 20px;">
+                Connecting to Spotify…
+            </div>
+            <button class="btn-login" onclick="login()">Connect to Spotify</button>
+            <div id="login-error" style="display: none; color: #ff8080; font-size: 0.9rem; margin-top: 16px;"></div>
+        </div>
     </div>
 
     <div id="app-screen">
@@ -461,8 +466,31 @@
             window.location.href = authUrl.toString();
         }
 
+        function showLogin(errorMessage) {
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('connecting-msg').style.display = 'none';
+            document.getElementById('login-error').style.display = errorMessage ? 'block' : 'none';
+            document.getElementById('login-error').textContent = errorMessage || '';
+        }
+
+        function showConnecting() {
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('connecting-msg').style.display = 'block';
+            document.getElementById('login-error').style.display = 'none';
+        }
+
         async function getToken(code) {
             const codeVerifier = localStorage.getItem('code_verifier');
+
+            // Clean the code out of the URL immediately so a refresh can't reuse it
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            if (!codeVerifier) {
+                showLogin("Session expired during login. Please tap Connect again.");
+                return;
+            }
 
             const payload = {
                 method: 'POST',
@@ -483,27 +511,31 @@
                 if (response.access_token) {
                     localStorage.setItem('spotify_access_token', response.access_token);
                     accessToken = response.access_token;
-                    window.history.replaceState({}, document.title, window.location.pathname);
                     showApp();
                 } else {
-                    alert("Authentication failed. Check your client ID and redirect URIs.");
+                    showLogin("Login failed" + (response.error_description ? ": " + response.error_description : "") + ". Check your Spotify redirect URI.");
                 }
             } catch (err) {
                 console.error("Token fetch error:", err);
+                showLogin("Couldn't reach Spotify. Check your connection and try again.");
             }
         }
 
         function checkAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
+            const error = urlParams.get('error');
 
-            if (code) {
+            if (error) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showLogin("Spotify sign-in was cancelled or denied.");
+            } else if (code) {
+                showConnecting();
                 getToken(code);
             } else if (accessToken) {
                 showApp();
             } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('app-screen').style.display = 'none';
+                showLogin();
             }
         }
 
@@ -723,9 +755,14 @@
         }
 
         // --- Initialize ---
-        applyLogo();
-        updatePregameFileStatus();
-        checkAuth();
+        try {
+            applyLogo();
+            updatePregameFileStatus();
+            checkAuth();
+        } catch (err) {
+            console.error("Init error:", err);
+            showLogin("Something went wrong loading the app. Please refresh.");
+        }
     </script>
 </body>
 </html>
