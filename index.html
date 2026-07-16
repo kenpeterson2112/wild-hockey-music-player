@@ -393,34 +393,38 @@
 
     <!-- ============================================================
          EDIT YOUR TRACKS HERE.
-         Each category is a list of Spotify track URIs.
-         Every URI must be wrapped in quotes, with a COMMA after each
-         one except the last in its list. This block is isolated on
-         purpose: a typo here can't break the rest of the app.
+         Each category is a list of tracks. Each track is:
+             { uri: 'spotify:track:XXXXX', name: 'Song Title' }
+         Optionally add a start time (in seconds) so playback skips
+         an intro:
+             { uri: 'spotify:track:XXXXX', name: 'Song Title', startSec: 15 }
+         Wrap every track in { }, put a COMMA after each track and
+         after each field except the last one in it. This block is
+         isolated on purpose: a typo here can't break the rest of the app.
          ============================================================ -->
     <script>
         window.TRACKS = {
             pregame: [
-                'spotify:track:0pqnGHJpmpxLKifKRmU6WP'
+                { uri: 'spotify:track:0pqnGHJpmpxLKifKRmU6WP', name: 'Pregame Track' }
             ],
             whistles: [
-                'spotify:track:51c94ac31swyEAyWHyOtz',
-                'spotify:track:1Eolhana7nKGWwIGvmihxX'
+                { uri: 'spotify:track:51c94ac31swyEAyWHyOtz', name: 'Whistles Track 1' },
+                { uri: 'spotify:track:1Eolhana7nKGWwIGvmihxX', name: 'Whistles Track 2' }
             ],
             goalFor: [
-                'spotify:track:2d7LPtieXdIYZEvugvOjl1'
+                { uri: 'spotify:track:2d7LPtieXdIYZEvugvOjl1', name: 'Goal FOR Track' }
             ],
             goalAgainst: [
-                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'
+                { uri: 'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq', name: 'Goal AGAINST Track' }
             ],
             penaltyFor: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+                { uri: 'spotify:track:0ofHAoxe9vBkTCp2UQIavz', name: 'Penalty FOR Track' }
             ],
             penaltyAgainst: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+                { uri: 'spotify:track:0ofHAoxe9vBkTCp2UQIavz', name: 'Penalty AGAINST Track' }
             ],
             endGame: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+                { uri: 'spotify:track:0ofHAoxe9vBkTCp2UQIavz', name: 'End Game Track' }
             ]
         };
     </script>
@@ -699,15 +703,26 @@
             }
             categoryTracks.forEach((track, index) => {
                 const uri = typeof track === 'string' ? track : track.uri;
-                const name = typeof track === 'string' ? `Track ${index + 1}` : track.name;
+                const name = typeof track === 'string' ? `Track ${index + 1}` : (track.name || `Track ${index + 1}`);
+                const startSec = typeof track === 'object' ? track.startSec : undefined;
+                const startMs = (typeof startSec === 'number' && startSec > 0) ? Math.round(startSec * 1000) : 0;
 
                 const item = document.createElement('div');
                 item.className = 'track-item';
-                item.innerHTML = `
-                    <div class="track-name">${name}</div>
-                    <div class="track-uri">${uri}</div>
-                `;
-                item.onclick = () => playTrack(uri, name);
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'track-name';
+                nameEl.textContent = name;
+                item.appendChild(nameEl);
+
+                if (startMs > 0) {
+                    const startEl = document.createElement('div');
+                    startEl.className = 'track-uri';
+                    startEl.textContent = `Starts at ${startSec}s`;
+                    item.appendChild(startEl);
+                }
+
+                item.onclick = () => playTrack(uri, name, startMs);
                 trackList.appendChild(item);
             });
 
@@ -747,17 +762,20 @@
         }
 
         // --- PLAYBACK CONTROLS ---
-        async function playTrack(uri, trackName) {
+        async function playTrack(uri, trackName, startMs) {
             if (!accessToken) return alert("Please log in first!");
 
             try {
+                const body = { uris: [uri] };
+                if (startMs > 0) body.position_ms = startMs;
+
                 const response = await fetch('https://api.spotify.com/v1/me/player/play', {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ uris: [uri] })
+                    body: JSON.stringify(body)
                 });
 
                 if (response.status === 404) {
