@@ -3,157 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Game Soundboard</title>
+    <title>Wild Soundboard</title>
     <style>
+        * { box-sizing: border-box; }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
+            background: radial-gradient(circle at 50% 0%, #1a2036 0%, #0d0f16 60%);
             color: white;
             margin: 0;
-            padding: 12px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            box-sizing: border-box;
+            height: 100dvh;
+            overflow: hidden;
             gap: 8px;
         }
         #login-screen, #app-screen {
             display: none;
             flex-direction: column;
             height: 100%;
-            gap: 8px;
-        }
-        .header {
-            text-align: center;
-            font-size: clamp(1.2rem, 4vw, 1.5rem);
-            font-weight: bold;
-            color: #1DB954;
-            flex-shrink: 0;
-            flex-grow: 1;
-        }
-        .settings-btn {
-            background-color: #333;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: clamp(12px, 3vh, 20px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            border-radius: 12px;
-            min-width: 50px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
-        }
-        .settings-btn:active {
-            transform: scale(0.96);
-            opacity: 0.8;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            flex-grow: 0;
-            flex-shrink: 1;
             min-height: 0;
+            gap: 8px;
         }
+
+        /* --- Logo bar --- */
+        .logo-bar {
+            flex-shrink: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 2px 0;
+        }
+        .logo-bar img {
+            max-height: 70px;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        /* --- Shared button base --- */
         button {
             border: none;
-            border-radius: 12px;
-            font-size: clamp(0.9rem, 2vw, 1.2rem);
-            font-weight: bold;
+            border-radius: 14px;
+            font-weight: 700;
             color: white;
             cursor: pointer;
             touch-action: manipulation;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            transition: transform 0.08s ease, filter 0.15s ease;
+            font-family: inherit;
         }
         button:active {
-            transform: scale(0.96);
-            opacity: 0.8;
+            transform: scale(0.97);
+            filter: brightness(1.15);
+        }
+
+        /* --- Pregame row --- */
+        .pregame-row {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
         }
         .btn-full {
-            background-color: #1DB954;
-            padding: clamp(12px, 3vh, 20px);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: clamp(45px, 8vh, 70px);
-        }
-        .btn-full.no-track {
-            background-color: #555;
-            color: #999;
-        }
-        .btn-grid {
-            background-color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            min-height: clamp(50px, 12vh, 140px);
-            max-height: 140px;
-        }
-        .now-playing {
-            background-color: #1e3a8a;
-            border-radius: 12px;
-            padding: 12px 15px;
-            flex-shrink: 0;
-            transition: background-color 0.3s;
-            min-height: clamp(50px, 12vh, 140px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .now-playing.idle {
-            background-color: #1e40af;
-        }
-        .now-playing.playing {
-            background-color: #1e3a8a;
-        }
-        .now-playing-label {
-            font-size: 0.85rem;
-            color: #a5d6ff;
+            flex: 1 1 auto;
+            background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
+            padding: 16px;
+            font-size: clamp(1rem, 3.2vw, 1.35rem);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: clamp(52px, 8vh, 74px);
+            box-shadow: 0 4px 14px rgba(29,185,84,0.25);
+        }
+        .btn-full.no-track {
+            background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+            color: #b0b0b0;
+            box-shadow: none;
+        }
+        .settings-btn {
+            flex-shrink: 0;
+            background: #23262e;
+            font-size: 1.4rem;
+            padding: 0 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #333842;
+        }
+
+        /* --- Sound grid --- */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-auto-rows: 1fr;
+            gap: 8px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .btn-grid {
+            background: #23262e;
+            border: 1px solid #333842;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-align: center;
+            padding: 6px;
+            font-size: clamp(0.85rem, 2.4vw, 1.15rem);
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-grid::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--accent, #555);
+        }
+        .btn-grid .emoji {
+            font-size: clamp(1.3rem, 5vw, 2rem);
+            line-height: 1;
+        }
+        .btn-grid.accent-green  { --accent: #1DB954; }
+        .btn-grid.accent-red    { --accent: #e0455e; }
+        .btn-grid.accent-blue   { --accent: #3b82f6; }
+        .btn-grid.accent-amber  { --accent: #f59e0b; }
+        .btn-grid.accent-purple { --accent: #a855f7; }
+        .btn-grid.accent-orange { --accent: #fb7139; }
+
+        /* --- Now playing --- */
+        .now-playing {
+            flex-shrink: 0;
+            border-radius: 14px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 62px;
+            background: #1b2340;
+            border: 1px solid #2a3a6b;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .now-playing.playing {
+            background: linear-gradient(135deg, #1e40af 0%, #2547c9 100%);
+            border-color: #4f7cff;
+        }
+        .np-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6b7db3;
+            flex-shrink: 0;
+        }
+        .now-playing.playing .np-dot {
+            background: #7dd3fc;
+            box-shadow: 0 0 0 0 rgba(125,211,252,0.7);
+            animation: pulse 1.4s infinite;
+        }
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(125,211,252,0.6); }
+            70%  { box-shadow: 0 0 0 10px rgba(125,211,252,0); }
+            100% { box-shadow: 0 0 0 0 rgba(125,211,252,0); }
+        }
+        .np-text { min-width: 0; }
+        .now-playing-label {
+            font-size: 0.7rem;
+            color: #9db0e0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
         .now-playing-track {
-            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            font-size: clamp(0.95rem, 2.4vw, 1.15rem);
             color: white;
             font-weight: 600;
-            margin-top: 4px;
+            margin-top: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* --- Stop --- */
         .btn-stop {
-            grid-column: span 2;
-            background-color: #e02424;
-            padding: clamp(20px, 4vh, 40px);
-            font-size: clamp(1.3rem, 3.5vw, 2rem);
-            text-transform: uppercase;
             flex-shrink: 0;
+            background: linear-gradient(135deg, #e02424 0%, #b81c1c 100%);
+            padding: 18px;
+            font-size: clamp(1.2rem, 4vw, 1.7rem);
+            text-transform: uppercase;
+            letter-spacing: 1px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: clamp(60px, 10vh, 100px);
+            gap: 8px;
+            min-height: clamp(58px, 9vh, 90px);
+            box-shadow: 0 4px 14px rgba(224,36,36,0.3);
         }
+
+        /* --- Login --- */
         .btn-login {
-            background-color: #1DB954;
+            background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
             padding: 20px;
             margin: auto;
             border-radius: 50px;
             width: 80%;
             font-size: 1.3rem;
         }
+
+        /* --- Modals --- */
         .modal {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(3px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -161,69 +227,77 @@
             padding: 20px;
         }
         .modal-content {
-            background-color: #1a1a1a;
+            background: #16181f;
             width: 100%;
-            max-width: 500px;
-            border-radius: 16px;
+            max-width: 460px;
+            border-radius: 18px;
             display: flex;
             flex-direction: column;
-            max-height: 70vh;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            max-height: 80vh;
+            border: 1px solid #2a2e38;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #333;
+            padding: 18px 20px;
+            border-bottom: 1px solid #2a2e38;
         }
-        #modal-title {
-            font-size: 1.3rem;
-            font-weight: bold;
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
             color: #1DB954;
         }
         .modal-close {
             background: none;
-            border: none;
-            color: white;
+            color: #aaa;
             font-size: 1.5rem;
-            cursor: pointer;
             padding: 0;
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
         }
         .track-list {
             overflow-y: auto;
-            padding: 10px;
-            flex-grow: 1;
+            padding: 12px;
         }
         .track-item {
-            background-color: #222;
-            border: 2px solid #333;
-            border-radius: 10px;
+            background: #20232c;
+            border: 2px solid #2c313d;
+            border-radius: 12px;
             padding: 15px;
             margin: 8px 0;
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            transition: all 0.15s;
         }
         .track-item:active {
-            background-color: #1DB954;
+            background: #1DB954;
             border-color: #1DB954;
             transform: scale(0.98);
         }
-        .track-name {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
+        .track-name { font-weight: 700; font-size: 1.05rem; }
         .track-uri {
-            font-size: 0.85rem;
-            color: #999;
+            font-size: 0.8rem;
+            color: #8a8f9c;
             font-family: monospace;
             word-break: break-all;
+            margin-top: 4px;
         }
+        .settings-body { padding: 20px; overflow-y: auto; }
+        .settings-section { margin-bottom: 24px; }
+        .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
+        .settings-section p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
+        .settings-section input[type="file"],
+        .settings-section input[type="text"] {
+            width: 100%;
+            padding: 11px;
+            background: #20232c;
+            border: 1px solid #2c313d;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+        }
+        .status-line { margin-top: 10px; font-size: 0.85rem; color: #8a8f9c; }
     </style>
 </head>
 <body>
@@ -233,42 +307,53 @@
     </div>
 
     <div id="app-screen">
-        <div id="logo-container" style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
-            <img id="team-logo" src="" alt="Team Logo" style="max-height: 80px; max-width: 100%; display: none;">
+        <div id="logo-bar" class="logo-bar">
+            <img id="team-logo" src="" alt="Team Logo">
         </div>
 
-        <div class="header" style="margin-bottom: 12px;">Game Soundboard</div>
-
-        <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
-            <button class="btn-full" id="pregame-btn" onclick="playPregame()" style="flex-grow: 1; margin-bottom: 0;">
-                Pregame Announcement
+        <div class="pregame-row">
+            <button class="btn-full" id="pregame-btn" onclick="playPregame()">
+                <span>📣</span> Pregame Announcement
             </button>
-            <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
+            <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
 
         <div class="grid">
-            <button class="btn-grid" onclick="openTrackSelector('whistles', 'Between Whistles')">Between Whistles</button>
-            <button class="btn-grid" onclick="openTrackSelector('goalFor', 'Goal FOR')">Goal FOR</button>
-
-            <button class="btn-grid" onclick="openTrackSelector('goalAgainst', 'Goal AGAINST')">Goal AGAINST</button>
-            <button class="btn-grid" onclick="openTrackSelector('penaltyFor', 'Penalty FOR')">Penalty FOR</button>
-
-            <button class="btn-grid" onclick="openTrackSelector('penaltyAgainst', 'Penalty AGAINST')">Penalty AGAINST</button>
-            <button class="btn-grid" onclick="openTrackSelector('endGame', 'End Game Intensity')">End Game Intensity</button>
+            <button class="btn-grid accent-purple" onclick="openTrackSelector('whistles', 'Between Whistles')">
+                <span class="emoji">🎵</span>Between Whistles
+            </button>
+            <button class="btn-grid accent-green" onclick="openTrackSelector('goalFor', 'Goal FOR')">
+                <span class="emoji">🚨</span>Goal FOR
+            </button>
+            <button class="btn-grid accent-red" onclick="openTrackSelector('goalAgainst', 'Goal AGAINST')">
+                <span class="emoji">🥅</span>Goal AGAINST
+            </button>
+            <button class="btn-grid accent-blue" onclick="openTrackSelector('penaltyFor', 'Penalty FOR')">
+                <span class="emoji">💪</span>Penalty FOR
+            </button>
+            <button class="btn-grid accent-amber" onclick="openTrackSelector('penaltyAgainst', 'Penalty AGAINST')">
+                <span class="emoji">⚠️</span>Penalty AGAINST
+            </button>
+            <button class="btn-grid accent-orange" onclick="openTrackSelector('endGame', 'End Game Intensity')">
+                <span class="emoji">🔥</span>End Game Intensity
+            </button>
         </div>
 
-        <div id="now-playing" class="now-playing idle">
-            <div class="now-playing-label">Now Playing</div>
-            <div id="now-playing-track" class="now-playing-track">Nothing</div>
+        <div id="now-playing" class="now-playing">
+            <div class="np-dot"></div>
+            <div class="np-text">
+                <div class="now-playing-label">Now Playing</div>
+                <div id="now-playing-track" class="now-playing-track">Nothing</div>
+            </div>
         </div>
 
-        <button class="btn-stop" onclick="stopMusic()">🛑 STOP MUSIC</button>
+        <button class="btn-stop" onclick="stopMusic()">🛑 Stop Music</button>
     </div>
 
     <div id="track-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <span id="modal-title">Select Track</span>
+                <span class="modal-title" id="track-modal-title">Select Track</span>
                 <button class="modal-close" onclick="closeTrackSelector()">✕</button>
             </div>
             <div id="track-list" class="track-list"></div>
@@ -276,24 +361,24 @@
     </div>
 
     <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content">
             <div class="modal-header">
-                <span id="modal-title">Settings</span>
+                <span class="modal-title">Settings</span>
                 <button class="modal-close" onclick="closeSettings()">✕</button>
             </div>
-            <div style="padding: 20px; overflow-y: auto;">
-                <div style="margin-bottom: 20px;">
-                    <h3 style="margin: 0 0 10px 0; color: #1DB954;">Team Logo</h3>
-                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Paste a URL to your team logo</p>
-                    <input type="text" id="logo-url-input" placeholder="https://..." style="width: 100%; padding: 10px; background-color: #222; border: 1px solid #333; border-radius: 6px; color: white; margin-bottom: 8px;">
-                    <button onclick="setLogoUrl()" style="background-color: #1DB954; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer;">Set Logo</button>
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h3>Team Logo</h3>
+                    <p>Upload a logo image to show at the top</p>
+                    <input type="file" id="logo-file-input" accept="image/*" onchange="handleLogoFileSelect()">
+                    <div id="logo-status" class="status-line"></div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <h3 style="margin: 0 0 10px 0; color: #1DB954;">Pregame Audio File</h3>
-                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Select an audio file to play for pregame announcement</p>
-                    <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()" style="width: 100%; padding: 10px; background-color: #222; border: 1px solid #333; border-radius: 6px; color: white; cursor: pointer;">
-                    <div id="pregame-file-status" style="margin-top: 10px; font-size: 0.85rem; color: #999;"></div>
+                <div class="settings-section">
+                    <h3>Pregame Audio File</h3>
+                    <p>Upload an audio file to play for the pregame announcement</p>
+                    <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()">
+                    <div id="pregame-file-status" class="status-line"></div>
                 </div>
             </div>
         </div>
@@ -302,33 +387,35 @@
     <script>
         // --- CONFIGURATION ---
         const CLIENT_ID = "15f455ebb98944a596f984be56766ac0"; // Paste your Client ID here
-        const REDIRECT_URI = window.location.origin + window.location.pathname; 
-        
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+
         let accessToken = localStorage.getItem('spotify_access_token');
 
         // --- TRACK ARRAYS ---
         const tracks = {
             pregame: [
+                'spotify:track:0tZ3mElWcr74OOhKEiNj8V',
+                'spotify:track:3cuNcsSWeYJ1LwI22z6QnS'
                 'spotify:track:0pqnGHJpmpxLKifKRmU6WP'
             ],
             whistles: [
-                'spotify:track:51c94ac31swyEAyWHyOtz',  
-                'spotify:track:1Eolhana7nKGWwIGvmihxX'  
+                'spotify:track:51c94ac31swyEAyWHyOtz',
+                'spotify:track:1Eolhana7nKGWwIGvmihxX'
             ],
             goalFor: [
-                'spotify:track:2d7LPtieXdIYZEvugvOjl1'  
+                'spotify:track:2d7LPtieXdIYZEvugvOjl1'
             ],
             goalAgainst: [
-                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'  
+                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'
             ],
             penaltyFor: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
             ],
             penaltyAgainst: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
             ],
             endGame: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
             ]
         };
 
@@ -360,7 +447,7 @@
 
             const scope = 'user-modify-playback-state user-read-playback-state';
             const authUrl = new URL("https://accounts.spotify.com/authorize");
-            
+
             const params = {
                 response_type: 'code',
                 client_id: CLIENT_ID,
@@ -376,7 +463,7 @@
 
         async function getToken(code) {
             const codeVerifier = localStorage.getItem('code_verifier');
-            
+
             const payload = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -411,13 +498,10 @@
             const code = urlParams.get('code');
 
             if (code) {
-                // If returning from Spotify with a code, swap it for a token
                 getToken(code);
             } else if (accessToken) {
-                // If we already have a saved token
                 showApp();
             } else {
-                // First time load
                 document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('app-screen').style.display = 'none';
             }
@@ -431,36 +515,61 @@
         // --- SETTINGS ---
         let pregameAudioData = localStorage.getItem('pregame_audio_data');
         let pregameFileName = localStorage.getItem('pregame_file_name');
-        let logoUrl = localStorage.getItem('logo_url');
+        let logoData = localStorage.getItem('logo_data');
 
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
-            document.getElementById('logo-url-input').value = logoUrl || '';
             updatePregameFileStatus();
+            updateLogoStatus();
         }
 
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
         }
 
-        function setLogoUrl() {
-            const urlInput = document.getElementById('logo-url-input');
-            logoUrl = urlInput.value.trim();
-            if (logoUrl) {
-                localStorage.setItem('logo_url', logoUrl);
-                const logoImg = document.getElementById('team-logo');
-                logoImg.src = logoUrl;
-                logoImg.style.display = 'block';
+        function handleLogoFileSelect() {
+            const file = document.getElementById('logo-file-input').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    logoData = e.target.result;
+                    localStorage.setItem('logo_data', logoData);
+                    applyLogo();
+                    updateLogoStatus();
+                } catch (err) {
+                    alert('Image too large for storage. Try a smaller file.');
+                    console.error('Storage error:', err);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyLogo() {
+            const bar = document.getElementById('logo-bar');
+            const img = document.getElementById('team-logo');
+            if (logoData) {
+                img.src = logoData;
+                bar.style.display = 'flex';
             } else {
-                localStorage.removeItem('logo_url');
-                document.getElementById('team-logo').style.display = 'none';
+                bar.style.display = 'none';
+            }
+        }
+
+        function updateLogoStatus() {
+            const el = document.getElementById('logo-status');
+            if (logoData) {
+                el.textContent = '✓ Logo loaded';
+                el.style.color = '#1DB954';
+            } else {
+                el.textContent = 'No logo selected';
+                el.style.color = '#8a8f9c';
             }
         }
 
         function handlePregameFileSelect() {
-            const fileInput = document.getElementById('pregame-file-input');
-            const file = fileInput.files[0];
-
+            const file = document.getElementById('pregame-file-input').files[0];
             if (!file) return;
 
             const reader = new FileReader();
@@ -489,7 +598,7 @@
                 pregameBtn.classList.remove('no-track');
             } else {
                 statusDiv.textContent = 'No file selected - will use Spotify';
-                statusDiv.style.color = '#999';
+                statusDiv.style.color = '#8a8f9c';
                 pregameBtn.classList.add('no-track');
             }
         }
@@ -500,7 +609,7 @@
         function openTrackSelector(category, label) {
             if (!accessToken) return alert("Please log in first!");
             currentCategory = category;
-            document.getElementById('modal-title').textContent = label;
+            document.getElementById('track-modal-title').textContent = label;
 
             const trackList = document.getElementById('track-list');
             trackList.innerHTML = '';
@@ -572,7 +681,6 @@
                 if (response.status === 404) {
                     alert("No active Spotify device found. Open Spotify on your phone and press play once to activate it.");
                 } else if (response.status === 401) {
-                    // Token expired
                     localStorage.removeItem('spotify_access_token');
                     accessToken = null;
                     checkAuth();
@@ -588,11 +696,20 @@
         function updateNowPlaying(trackName) {
             const nowPlaying = document.getElementById('now-playing');
             document.getElementById('now-playing-track').textContent = trackName;
-            nowPlaying.classList.remove('idle');
             nowPlaying.classList.add('playing');
         }
 
         async function stopMusic() {
+            // Stop local pregame audio if playing
+            if (pregameAudioElement) {
+                pregameAudioElement.pause();
+                pregameAudioElement.currentTime = 0;
+            }
+
+            const nowPlaying = document.getElementById('now-playing');
+            document.getElementById('now-playing-track').textContent = 'Nothing';
+            nowPlaying.classList.remove('playing');
+
             if (!accessToken) return;
 
             try {
@@ -600,21 +717,13 @@
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-
-                const nowPlaying = document.getElementById('now-playing');
-                document.getElementById('now-playing-track').textContent = 'Nothing';
-                nowPlaying.classList.remove('playing');
-                nowPlaying.classList.add('idle');
             } catch (error) {
                 console.error("Error pausing track:", error);
             }
         }
 
-        // Initialize
-        if (logoUrl) {
-            document.getElementById('team-logo').src = logoUrl;
-            document.getElementById('team-logo').style.display = 'block';
-        }
+        // --- Initialize ---
+        applyLogo();
         updatePregameFileStatus();
         checkAuth();
     </script>
