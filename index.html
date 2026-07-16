@@ -69,7 +69,35 @@
             justify-content: center;
             text-align: center;
             min-height: 0;
-            max-height: 100px;
+            max-height: 140px;
+        }
+        .now-playing {
+            background-color: #1e3a8a;
+            border-radius: 12px;
+            padding: 12px 15px;
+            flex-shrink: 0;
+            transition: background-color 0.3s;
+        }
+        .now-playing.idle {
+            background-color: #1e40af;
+        }
+        .now-playing.playing {
+            background-color: #1e3a8a;
+        }
+        .now-playing-label {
+            font-size: 0.85rem;
+            color: #a5d6ff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .now-playing-track {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: white;
+            font-weight: 600;
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .btn-stop {
             grid-column: span 2;
@@ -99,17 +127,20 @@
             bottom: 0;
             background-color: rgba(0, 0, 0, 0.7);
             display: flex;
-            align-items: flex-end;
+            align-items: center;
+            justify-content: center;
             z-index: 1000;
+            padding: 20px;
         }
         .modal-content {
             background-color: #1a1a1a;
             width: 100%;
-            border-radius: 20px 20px 0 0;
+            max-width: 500px;
+            border-radius: 16px;
             display: flex;
             flex-direction: column;
-            max-height: 80vh;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+            max-height: 70vh;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
         .modal-header {
             display: flex;
@@ -189,6 +220,11 @@
 
             <button class="btn-grid" onclick="openTrackSelector('penaltyAgainst', 'Penalty AGAINST')">Penalty AGAINST</button>
             <button class="btn-grid" onclick="openTrackSelector('endGame', 'End Game Intensity')">End Game Intensity</button>
+        </div>
+
+        <div id="now-playing" class="now-playing idle">
+            <div class="now-playing-label">Now Playing</div>
+            <div id="now-playing-track" class="now-playing-track">Nothing</div>
         </div>
 
         <button class="btn-stop" onclick="stopMusic()">🛑 STOP MUSIC</button>
@@ -346,14 +382,17 @@
             trackList.innerHTML = '';
 
             const categoryTracks = tracks[category] || [];
-            categoryTracks.forEach((uri, index) => {
+            categoryTracks.forEach((track, index) => {
+                const uri = typeof track === 'string' ? track : track.uri;
+                const name = typeof track === 'string' ? `Track ${index + 1}` : track.name;
+
                 const item = document.createElement('div');
                 item.className = 'track-item';
                 item.innerHTML = `
-                    <div class="track-name">Track ${index + 1}</div>
+                    <div class="track-name">${name}</div>
                     <div class="track-uri">${uri}</div>
                 `;
-                item.onclick = () => playTrack(uri);
+                item.onclick = () => playTrack(uri, name);
                 trackList.appendChild(item);
             });
 
@@ -366,7 +405,7 @@
         }
 
         // --- PLAYBACK CONTROLS ---
-        async function playTrack(uri) {
+        async function playTrack(uri, trackName) {
             if (!accessToken) return alert("Please log in first!");
 
             try {
@@ -387,6 +426,7 @@
                     accessToken = null;
                     checkAuth();
                 } else {
+                    updateNowPlaying(trackName);
                     closeTrackSelector();
                 }
             } catch (error) {
@@ -394,14 +434,26 @@
             }
         }
 
+        function updateNowPlaying(trackName) {
+            const nowPlaying = document.getElementById('now-playing');
+            document.getElementById('now-playing-track').textContent = trackName;
+            nowPlaying.classList.remove('idle');
+            nowPlaying.classList.add('playing');
+        }
+
         async function stopMusic() {
             if (!accessToken) return;
-            
+
             try {
                 await fetch('https://api.spotify.com/v1/me/player/pause', {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
+
+                const nowPlaying = document.getElementById('now-playing');
+                document.getElementById('now-playing-track').textContent = 'Nothing';
+                nowPlaying.classList.remove('playing');
+                nowPlaying.classList.add('idle');
             } catch (error) {
                 console.error("Error pausing track:", error);
             }
