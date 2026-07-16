@@ -391,6 +391,40 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         EDIT YOUR TRACKS HERE.
+         Each category is a list of Spotify track URIs.
+         Every URI must be wrapped in quotes, with a COMMA after each
+         one except the last in its list. This block is isolated on
+         purpose: a typo here can't break the rest of the app.
+         ============================================================ -->
+    <script>
+        window.TRACKS = {
+            pregame: [
+                'spotify:track:0pqnGHJpmpxLKifKRmU6WP'
+            ],
+            whistles: [
+                'spotify:track:51c94ac31swyEAyWHyOtz',
+                'spotify:track:1Eolhana7nKGWwIGvmihxX'
+            ],
+            goalFor: [
+                'spotify:track:2d7LPtieXdIYZEvugvOjl1'
+            ],
+            goalAgainst: [
+                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'
+            ],
+            penaltyFor: [
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+            ],
+            penaltyAgainst: [
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+            ],
+            endGame: [
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
+            ]
+        };
+    </script>
+
     <script>
         // --- SAFETY NET: never allow a blank/black screen ---
         // If any unexpected error occurs, make sure the login screen is visible
@@ -427,33 +461,10 @@
 
         let accessToken = lsGet('spotify_access_token');
 
-        // --- TRACK ARRAYS ---
-        const tracks = {
-            pregame: [
-                'spotify:track:0tZ3mElWcr74OOhKEiNj8V',
-                'spotify:track:3cuNcsSWeYJ1LwI22z6QnS'
-                'spotify:track:0pqnGHJpmpxLKifKRmU6WP'
-            ],
-            whistles: [
-                'spotify:track:51c94ac31swyEAyWHyOtz',
-                'spotify:track:1Eolhana7nKGWwIGvmihxX'
-            ],
-            goalFor: [
-                'spotify:track:2d7LPtieXdIYZEvugvOjl1'
-            ],
-            goalAgainst: [
-                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'
-            ],
-            penaltyFor: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
-            ],
-            penaltyAgainst: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
-            ],
-            endGame: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'
-            ]
-        };
+        // Track lists live in their own <script> block above. If that block
+        // has a typo (e.g. a missing comma), only the track lists are lost —
+        // the app itself keeps working and shows a warning when you open one.
+        const tracks = window.TRACKS || {};
 
         // --- PKCE AUTHENTICATION LOGIC ---
         function generateRandomString(length) {
@@ -678,6 +689,14 @@
             trackList.innerHTML = '';
 
             const categoryTracks = tracks[category] || [];
+            if (categoryTracks.length === 0) {
+                const note = document.createElement('div');
+                note.style.cssText = 'padding:20px;color:#8a8f9c;text-align:center;';
+                note.textContent = window.TRACKS
+                    ? 'No tracks set up for this button yet. Add Spotify URIs to this category in index.html.'
+                    : 'Track list failed to load — check index.html for a typo (usually a missing comma or quote) in the TRACKS block.';
+                trackList.appendChild(note);
+            }
             categoryTracks.forEach((track, index) => {
                 const uri = typeof track === 'string' ? track : track.uri;
                 const name = typeof track === 'string' ? `Track ${index + 1}` : track.name;
