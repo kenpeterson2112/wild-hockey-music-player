@@ -79,6 +79,80 @@
             width: 80%;
             font-size: 1.3rem;
         }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #1a1a1a;
+            width: 100%;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+        #modal-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #1DB954;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+        .track-list {
+            overflow-y: auto;
+            padding: 10px;
+            flex-grow: 1;
+        }
+        .track-item {
+            background-color: #222;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .track-item:active {
+            background-color: #1DB954;
+            border-color: #1DB954;
+            transform: scale(0.98);
+        }
+        .track-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .track-uri {
+            font-size: 0.85rem;
+            color: #999;
+            font-family: monospace;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -89,23 +163,33 @@
 
     <div id="app-screen">
         <div class="header">Game Soundboard</div>
-        
-        <button class="btn-full" onclick="playRandomTrack('pregame')">
+
+        <button class="btn-full" onclick="openTrackSelector('pregame', 'Pregame Announcement')">
             Pregame Announcement
         </button>
 
         <div class="grid">
-            <button class="btn-grid" onclick="playRandomTrack('whistles')">Between Whistles</button>
-            <button class="btn-grid" onclick="playRandomTrack('goalFor')">Goal FOR</button>
-            
-            <button class="btn-grid" onclick="playRandomTrack('goalAgainst')">Goal AGAINST</button>
-            <button class="btn-grid" onclick="playRandomTrack('penaltyFor')">Penalty FOR</button>
-            
-            <button class="btn-grid" onclick="playRandomTrack('penaltyAgainst')">Penalty AGAINST</button>
-            <button class="btn-grid" onclick="playRandomTrack('endGame')">End Game Intensity</button>
+            <button class="btn-grid" onclick="openTrackSelector('whistles', 'Between Whistles')">Between Whistles</button>
+            <button class="btn-grid" onclick="openTrackSelector('goalFor', 'Goal FOR')">Goal FOR</button>
+
+            <button class="btn-grid" onclick="openTrackSelector('goalAgainst', 'Goal AGAINST')">Goal AGAINST</button>
+            <button class="btn-grid" onclick="openTrackSelector('penaltyFor', 'Penalty FOR')">Penalty FOR</button>
+
+            <button class="btn-grid" onclick="openTrackSelector('penaltyAgainst', 'Penalty AGAINST')">Penalty AGAINST</button>
+            <button class="btn-grid" onclick="openTrackSelector('endGame', 'End Game Intensity')">End Game Intensity</button>
         </div>
 
         <button class="btn-stop" onclick="stopMusic()">🛑 STOP MUSIC</button>
+    </div>
+
+    <div id="track-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title">Select Track</span>
+                <button class="modal-close" onclick="closeTrackSelector()">✕</button>
+            </div>
+            <div id="track-list" class="track-list"></div>
+        </div>
     </div>
 
     <script>
@@ -238,14 +322,40 @@
             document.getElementById('app-screen').style.display = 'flex';
         }
 
-        // --- PLAYBACK CONTROLS ---
-        async function playRandomTrack(category) {
+        // --- TRACK SELECTOR MODAL ---
+        let currentCategory = null;
+
+        function openTrackSelector(category, label) {
             if (!accessToken) return alert("Please log in first!");
+            currentCategory = category;
+            document.getElementById('modal-title').textContent = label;
 
-            const categoryTracks = tracks[category];
-            if (!categoryTracks || categoryTracks.length === 0) return;
+            const trackList = document.getElementById('track-list');
+            trackList.innerHTML = '';
 
-            const randomUri = categoryTracks[Math.floor(Math.random() * categoryTracks.length)];
+            const categoryTracks = tracks[category] || [];
+            categoryTracks.forEach((uri, index) => {
+                const item = document.createElement('div');
+                item.className = 'track-item';
+                item.innerHTML = `
+                    <div class="track-name">Track ${index + 1}</div>
+                    <div class="track-uri">${uri}</div>
+                `;
+                item.onclick = () => playTrack(uri);
+                trackList.appendChild(item);
+            });
+
+            document.getElementById('track-modal').style.display = 'flex';
+        }
+
+        function closeTrackSelector() {
+            document.getElementById('track-modal').style.display = 'none';
+            currentCategory = null;
+        }
+
+        // --- PLAYBACK CONTROLS ---
+        async function playTrack(uri) {
+            if (!accessToken) return alert("Please log in first!");
 
             try {
                 const response = await fetch('https://api.spotify.com/v1/me/player/play', {
@@ -254,7 +364,7 @@
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ uris: [randomUri] })
+                    body: JSON.stringify({ uris: [uri] })
                 });
 
                 if (response.status === 404) {
@@ -264,6 +374,8 @@
                     localStorage.removeItem('spotify_access_token');
                     accessToken = null;
                     checkAuth();
+                } else {
+                    closeTrackSelector();
                 }
             } catch (error) {
                 console.error("Error playing track:", error);
