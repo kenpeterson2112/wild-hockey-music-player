@@ -29,6 +29,21 @@
             font-weight: bold;
             color: #1DB954;
             flex-shrink: 0;
+            flex-grow: 1;
+        }
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .settings-btn:active {
+            opacity: 0.7;
         }
         .grid {
             display: grid;
@@ -205,9 +220,12 @@
     </div>
 
     <div id="app-screen">
-        <div class="header">Game Soundboard</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="header">Game Soundboard</div>
+            <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
+        </div>
 
-        <button class="btn-full" onclick="openTrackSelector('pregame', 'Pregame Announcement')">
+        <button class="btn-full" onclick="playPregame()">
             Pregame Announcement
         </button>
 
@@ -237,6 +255,23 @@
                 <button class="modal-close" onclick="closeTrackSelector()">✕</button>
             </div>
             <div id="track-list" class="track-list"></div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <span id="modal-title">Settings</span>
+                <button class="modal-close" onclick="closeSettings()">✕</button>
+            </div>
+            <div style="padding: 20px; overflow-y: auto;">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #1DB954;">Pregame Audio File</h3>
+                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Select an audio file to play for pregame announcement instead of Spotify</p>
+                    <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()" style="width: 100%; padding: 10px; background-color: #222; border: 1px solid #333; border-radius: 6px; color: white; cursor: pointer;">
+                    <div id="pregame-file-status" style="margin-top: 10px; font-size: 0.85rem; color: #999;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -369,6 +404,52 @@
             document.getElementById('app-screen').style.display = 'flex';
         }
 
+        // --- SETTINGS ---
+        let pregameAudioData = localStorage.getItem('pregame_audio_data');
+        let pregameFileName = localStorage.getItem('pregame_file_name');
+
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'flex';
+            updatePregameFileStatus();
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function handlePregameFileSelect() {
+            const fileInput = document.getElementById('pregame-file-input');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    pregameAudioData = e.target.result;
+                    pregameFileName = file.name;
+                    localStorage.setItem('pregame_audio_data', pregameAudioData);
+                    localStorage.setItem('pregame_file_name', pregameFileName);
+                    updatePregameFileStatus();
+                } catch (err) {
+                    alert('File too large for storage. Try a smaller audio file.');
+                    console.error('Storage error:', err);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updatePregameFileStatus() {
+            const statusDiv = document.getElementById('pregame-file-status');
+            if (pregameFileName) {
+                statusDiv.textContent = `✓ Loaded: ${pregameFileName}`;
+                statusDiv.style.color = '#1DB954';
+            } else {
+                statusDiv.textContent = 'No file selected - will use Spotify';
+                statusDiv.style.color = '#999';
+            }
+        }
+
         // --- TRACK SELECTOR MODAL ---
         let currentCategory = null;
 
@@ -401,6 +482,33 @@
         function closeTrackSelector() {
             document.getElementById('track-modal').style.display = 'none';
             currentCategory = null;
+        }
+
+        // --- PREGAME AUDIO ---
+        let pregameAudioElement = null;
+
+        function playPregame() {
+            if (!accessToken) return alert("Please log in first!");
+
+            if (pregameAudioData) {
+                playPregameAudio();
+            } else {
+                openTrackSelector('pregame', 'Pregame Announcement');
+            }
+        }
+
+        function playPregameAudio() {
+            if (!pregameAudioElement) {
+                pregameAudioElement = new Audio();
+            }
+
+            pregameAudioElement.src = pregameAudioData;
+            pregameAudioElement.play().catch(err => {
+                console.error('Error playing pregame audio:', err);
+                alert('Error playing audio file');
+            });
+
+            updateNowPlaying(pregameFileName || 'Pregame Announcement');
         }
 
         // --- PLAYBACK CONTROLS ---
@@ -459,6 +567,7 @@
         }
 
         // Initialize
+        updatePregameFileStatus();
         checkAuth();
     </script>
 </body>
