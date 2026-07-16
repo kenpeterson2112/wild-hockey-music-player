@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wild Game Soundboard</title>
+    <title>Game Soundboard</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -111,59 +111,131 @@
     <script>
         // --- CONFIGURATION ---
         const CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // Paste your Client ID here
-        
-        // Auto-detects if you are on localhost or GitHub Pages
         const REDIRECT_URI = window.location.origin + window.location.pathname; 
         
-        let accessToken = null;
+        let accessToken = localStorage.getItem('spotify_access_token');
 
-        // --- TRACK ARRAYS (Right-click a song in Spotify -> Share -> Copy Spotify URI) ---
+        // --- TRACK ARRAYS ---
         const tracks = {
             pregame: [
-                'spotify:track:0tZ3mElWcr74OOhKEiNj8V', // Placeholder: RATM
-                'spotify:track:3cuNcsSWeYJ1LwI22z6QnS'  // Placeholder: Mastodon
+                'spotify:track:0tZ3mElWcr74OOhKEiNj8V', 
+                'spotify:track:3cuNcsSWeYJ1LwI22z6QnS'  
             ],
             whistles: [
-                'spotify:track:51c94ac31swyEAyWHyOtz',  // Placeholder: Fast Punk Track
-                'spotify:track:1Eolhana7nKGWwIGvmihxX'  // Placeholder: Radiohead
+                'spotify:track:51c94ac31swyEAyWHyOtz',  
+                'spotify:track:1Eolhana7nKGWwIGvmihxX'  
             ],
             goalFor: [
-                'spotify:track:2d7LPtieXdIYZEvugvOjl1'  // Placeholder: High Energy/Explosive
+                'spotify:track:2d7LPtieXdIYZEvugvOjl1'  
             ],
             goalAgainst: [
-                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'  // Placeholder: Somber/Heavy
+                'spotify:track:3hB3sGhU2qJ1BEn9JjP2Hq'  
             ],
             penaltyFor: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  // Placeholder: Gojira (Hype)
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
             ],
             penaltyAgainst: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  // Placeholder: Tense Opeth riff
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
             ],
             endGame: [
-                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  // Placeholder: Epic Prog Rock closer
+                'spotify:track:0ofHAoxe9vBkTCp2UQIavz'  
             ]
         };
 
-        // --- AUTHENTICATION ---
-        function checkToken() {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            accessToken = params.get('access_token');
+        // --- PKCE AUTHENTICATION LOGIC ---
+        function generateRandomString(length) {
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const values = crypto.getRandomValues(new Uint8Array(length));
+            return values.reduce((acc, x) => acc + possible[x % possible.length], "");
+        }
 
-            if (accessToken) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-screen').style.display = 'flex';
-                window.history.pushState("", document.title, window.location.pathname);
+        async function sha256(plain) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plain);
+            return window.crypto.subtle.digest('SHA-256', data);
+        }
+
+        function base64encode(input) {
+            return btoa(String.fromCharCode(...new Uint8Array(input)))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
+        }
+
+        async function login() {
+            const codeVerifier = generateRandomString(64);
+            window.localStorage.setItem('code_verifier', codeVerifier);
+            const hashed = await sha256(codeVerifier);
+            const codeChallenge = base64encode(hashed);
+
+            const scope = 'user-modify-playback-state user-read-playback-state';
+            const authUrl = new URL("https://accounts.spotify.com/authorize");
+            
+            const params = {
+                response_type: 'code',
+                client_id: CLIENT_ID,
+                scope: scope,
+                code_challenge_method: 'S256',
+                code_challenge: codeChallenge,
+                redirect_uri: REDIRECT_URI,
+            };
+
+            authUrl.search = new URLSearchParams(params).toString();
+            window.location.href = authUrl.toString();
+        }
+
+        async function getToken(code) {
+            const codeVerifier = localStorage.getItem('code_verifier');
+            
+            const payload = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: CLIENT_ID,
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: REDIRECT_URI,
+                    code_verifier: codeVerifier,
+                })
+            };
+
+            try {
+                const body = await fetch("https://accounts.spotify.com/api/token", payload);
+                const response = await body.json();
+
+                if (response.access_token) {
+                    localStorage.setItem('spotify_access_token', response.access_token);
+                    accessToken = response.access_token;
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showApp();
+                } else {
+                    alert("Authentication failed. Check your client ID and redirect URIs.");
+                }
+            } catch (err) {
+                console.error("Token fetch error:", err);
+            }
+        }
+
+        function checkAuth() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+
+            if (code) {
+                // If returning from Spotify with a code, swap it for a token
+                getToken(code);
+            } else if (accessToken) {
+                // If we already have a saved token
+                showApp();
             } else {
+                // First time load
                 document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('app-screen').style.display = 'none';
             }
         }
 
-        function login() {
-            const scope = 'user-modify-playback-state user-read-playback-state';
-            const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}`;
-            window.location.href = authUrl;
+        function showApp() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
         }
 
         // --- PLAYBACK CONTROLS ---
@@ -173,7 +245,6 @@
             const categoryTracks = tracks[category];
             if (!categoryTracks || categoryTracks.length === 0) return;
 
-            // Pick a random track from the array
             const randomUri = categoryTracks[Math.floor(Math.random() * categoryTracks.length)];
 
             try {
@@ -188,6 +259,11 @@
 
                 if (response.status === 404) {
                     alert("No active Spotify device found. Open Spotify on your phone and press play once to activate it.");
+                } else if (response.status === 401) {
+                    // Token expired
+                    localStorage.removeItem('spotify_access_token');
+                    accessToken = null;
+                    checkAuth();
                 }
             } catch (error) {
                 console.error("Error playing track:", error);
@@ -208,7 +284,7 @@
         }
 
         // Initialize
-        checkToken();
+        checkAuth();
     </script>
 </body>
 </html>
