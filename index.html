@@ -32,18 +32,23 @@
             flex-grow: 1;
         }
         .settings-btn {
-            background: none;
+            background-color: #333;
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
-            padding: 8px;
+            padding: clamp(12px, 3vh, 20px);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            border-radius: 12px;
+            min-width: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
         }
         .settings-btn:active {
-            opacity: 0.7;
+            transform: scale(0.96);
+            opacity: 0.8;
         }
         .grid {
             display: grid;
@@ -69,13 +74,17 @@
             opacity: 0.8;
         }
         .btn-full {
-            grid-column: span 2;
             background-color: #1DB954;
-            padding: clamp(12px, 3vh, 25px);
+            padding: clamp(12px, 3vh, 20px);
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: clamp(45px, 8vh, 70px);
+        }
+        .btn-full.no-track {
+            background-color: #555;
+            color: #999;
         }
         .btn-grid {
             background-color: #333;
@@ -83,7 +92,7 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            min-height: 0;
+            min-height: clamp(50px, 12vh, 140px);
             max-height: 140px;
         }
         .now-playing {
@@ -92,6 +101,10 @@
             padding: 12px 15px;
             flex-shrink: 0;
             transition: background-color 0.3s;
+            min-height: clamp(50px, 12vh, 140px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .now-playing.idle {
             background-color: #1e40af;
@@ -220,14 +233,18 @@
     </div>
 
     <div id="app-screen">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div class="header">Game Soundboard</div>
-            <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
+        <div id="logo-container" style="text-align: center; margin-bottom: 12px; flex-shrink: 0;">
+            <img id="team-logo" src="" alt="Team Logo" style="max-height: 80px; max-width: 100%; display: none;">
         </div>
 
-        <button class="btn-full" onclick="playPregame()">
-            Pregame Announcement
-        </button>
+        <div class="header" style="margin-bottom: 12px;">Game Soundboard</div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
+            <button class="btn-full" id="pregame-btn" onclick="playPregame()" style="flex-grow: 1; margin-bottom: 0;">
+                Pregame Announcement
+            </button>
+            <button id="settings-btn" class="settings-btn" onclick="openSettings()">⚙️</button>
+        </div>
 
         <div class="grid">
             <button class="btn-grid" onclick="openTrackSelector('whistles', 'Between Whistles')">Between Whistles</button>
@@ -266,8 +283,15 @@
             </div>
             <div style="padding: 20px; overflow-y: auto;">
                 <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #1DB954;">Team Logo</h3>
+                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Paste a URL to your team logo</p>
+                    <input type="text" id="logo-url-input" placeholder="https://..." style="width: 100%; padding: 10px; background-color: #222; border: 1px solid #333; border-radius: 6px; color: white; margin-bottom: 8px;">
+                    <button onclick="setLogoUrl()" style="background-color: #1DB954; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer;">Set Logo</button>
+                </div>
+
+                <div style="margin-bottom: 20px;">
                     <h3 style="margin: 0 0 10px 0; color: #1DB954;">Pregame Audio File</h3>
-                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Select an audio file to play for pregame announcement instead of Spotify</p>
+                    <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #999;">Select an audio file to play for pregame announcement</p>
                     <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()" style="width: 100%; padding: 10px; background-color: #222; border: 1px solid #333; border-radius: 6px; color: white; cursor: pointer;">
                     <div id="pregame-file-status" style="margin-top: 10px; font-size: 0.85rem; color: #999;"></div>
                 </div>
@@ -407,14 +431,30 @@
         // --- SETTINGS ---
         let pregameAudioData = localStorage.getItem('pregame_audio_data');
         let pregameFileName = localStorage.getItem('pregame_file_name');
+        let logoUrl = localStorage.getItem('logo_url');
 
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
+            document.getElementById('logo-url-input').value = logoUrl || '';
             updatePregameFileStatus();
         }
 
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function setLogoUrl() {
+            const urlInput = document.getElementById('logo-url-input');
+            logoUrl = urlInput.value.trim();
+            if (logoUrl) {
+                localStorage.setItem('logo_url', logoUrl);
+                const logoImg = document.getElementById('team-logo');
+                logoImg.src = logoUrl;
+                logoImg.style.display = 'block';
+            } else {
+                localStorage.removeItem('logo_url');
+                document.getElementById('team-logo').style.display = 'none';
+            }
         }
 
         function handlePregameFileSelect() {
@@ -441,12 +481,16 @@
 
         function updatePregameFileStatus() {
             const statusDiv = document.getElementById('pregame-file-status');
+            const pregameBtn = document.getElementById('pregame-btn');
+
             if (pregameFileName) {
                 statusDiv.textContent = `✓ Loaded: ${pregameFileName}`;
                 statusDiv.style.color = '#1DB954';
+                pregameBtn.classList.remove('no-track');
             } else {
                 statusDiv.textContent = 'No file selected - will use Spotify';
                 statusDiv.style.color = '#999';
+                pregameBtn.classList.add('no-track');
             }
         }
 
@@ -567,6 +611,10 @@
         }
 
         // Initialize
+        if (logoUrl) {
+            document.getElementById('team-logo').src = logoUrl;
+            document.getElementById('team-logo').style.display = 'block';
+        }
         updatePregameFileStatus();
         checkAuth();
     </script>
