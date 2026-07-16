@@ -30,20 +30,6 @@
         #login-screen { display: flex; }
         #app-screen { display: none; }
 
-        /* --- Logo bar --- */
-        .logo-bar {
-            flex-shrink: 0;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 2px 0;
-        }
-        .logo-bar img {
-            max-height: 70px;
-            max-width: 100%;
-            object-fit: contain;
-        }
-
         /* --- Shared button base --- */
         button {
             border: none;
@@ -314,10 +300,6 @@
     </div>
 
     <div id="app-screen">
-        <div id="logo-bar" class="logo-bar">
-            <img id="team-logo" src="" alt="Team Logo">
-        </div>
-
         <div class="pregame-row">
             <button class="btn-full" id="pregame-btn" onclick="playPregame()">
                 <span>📣</span> Pregame Announcement
@@ -335,11 +317,11 @@
             <button class="btn-grid accent-red" onclick="openTrackSelector('goalAgainst', 'Goal AGAINST')">
                 <span class="emoji">🥅</span>Goal AGAINST
             </button>
-            <button class="btn-grid accent-blue" onclick="openTrackSelector('penaltyFor', 'Penalty FOR')">
-                <span class="emoji">💪</span>Penalty FOR
+            <button class="btn-grid accent-blue" onclick="openTrackSelector('penaltyFor', 'Powerplay')">
+                <span class="emoji">💪</span>Powerplay
             </button>
-            <button class="btn-grid accent-amber" onclick="openTrackSelector('penaltyAgainst', 'Penalty AGAINST')">
-                <span class="emoji">⚠️</span>Penalty AGAINST
+            <button class="btn-grid accent-amber" onclick="openTrackSelector('penaltyAgainst', 'Penalty Kill')">
+                <span class="emoji">⚠️</span>Penalty Kill
             </button>
             <button class="btn-grid accent-orange" onclick="openTrackSelector('endGame', 'End Game Intensity')">
                 <span class="emoji">🔥</span>End Game Intensity
@@ -374,13 +356,6 @@
                 <button class="modal-close" onclick="closeSettings()">✕</button>
             </div>
             <div class="settings-body">
-                <div class="settings-section">
-                    <h3>Team Logo</h3>
-                    <p>Upload a logo image to show at the top</p>
-                    <input type="file" id="logo-file-input" accept="image/*" onchange="handleLogoFileSelect()">
-                    <div id="logo-status" class="status-line"></div>
-                </div>
-
                 <div class="settings-section">
                     <h3>Pregame Audio File</h3>
                     <p>Upload an audio file to play for the pregame announcement</p>
@@ -593,57 +568,14 @@
         // --- SETTINGS ---
         let pregameAudioData = lsGet('pregame_audio_data');
         let pregameFileName = lsGet('pregame_file_name');
-        let logoData = lsGet('logo_data');
 
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
-            updateLogoStatus();
         }
 
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
-        }
-
-        function handleLogoFileSelect() {
-            const file = document.getElementById('logo-file-input').files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    logoData = e.target.result;
-                    lsSet('logo_data', logoData);
-                    applyLogo();
-                    updateLogoStatus();
-                } catch (err) {
-                    alert('Image too large for storage. Try a smaller file.');
-                    console.error('Storage error:', err);
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function applyLogo() {
-            const bar = document.getElementById('logo-bar');
-            const img = document.getElementById('team-logo');
-            if (logoData) {
-                img.src = logoData;
-                bar.style.display = 'flex';
-            } else {
-                bar.style.display = 'none';
-            }
-        }
-
-        function updateLogoStatus() {
-            const el = document.getElementById('logo-status');
-            if (logoData) {
-                el.textContent = '✓ Logo loaded';
-                el.style.color = '#1DB954';
-            } else {
-                el.textContent = 'No logo selected';
-                el.style.color = '#8a8f9c';
-            }
         }
 
         function handlePregameFileSelect() {
@@ -824,7 +756,6 @@
 
         // --- Initialize ---
         try {
-            applyLogo();
             updatePregameFileStatus();
             checkAuth();
         } catch (err) {
