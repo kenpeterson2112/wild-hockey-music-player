@@ -21,12 +21,14 @@
             gap: 8px;
         }
         #login-screen, #app-screen {
-            display: none;
             flex-direction: column;
             height: 100%;
             min-height: 0;
             gap: 8px;
         }
+        /* Login shows by DEFAULT so a JS failure never leaves a black screen */
+        #login-screen { display: flex; }
+        #app-screen { display: none; }
 
         /* --- Logo bar --- */
         .logo-bar {
@@ -390,11 +392,40 @@
     </div>
 
     <script>
+        // --- SAFETY NET: never allow a blank/black screen ---
+        // If any unexpected error occurs, make sure the login screen is visible
+        // and show a short message instead of leaving the user staring at black.
+        window.onerror = function (message) {
+            try {
+                var login = document.getElementById('login-screen');
+                var app = document.getElementById('app-screen');
+                if (login) login.style.display = 'flex';
+                if (app) app.style.display = 'none';
+                var errEl = document.getElementById('login-error');
+                if (errEl) {
+                    errEl.style.display = 'block';
+                    errEl.textContent = 'Something went wrong: ' + message;
+                }
+            } catch (e) {}
+            return false;
+        };
+
+        // Storage that can never throw (some mobile/PWA contexts block localStorage)
+        function lsGet(key) {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+        function lsSet(key, value) {
+            try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+        }
+        function lsRemove(key) {
+            try { localStorage.removeItem(key); } catch (e) {}
+        }
+
         // --- CONFIGURATION ---
         const CLIENT_ID = "15f455ebb98944a596f984be56766ac0"; // Paste your Client ID here
         const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-        let accessToken = localStorage.getItem('spotify_access_token');
+        let accessToken = lsGet('spotify_access_token');
 
         // --- TRACK ARRAYS ---
         const tracks = {
@@ -445,7 +476,7 @@
 
         async function login() {
             const codeVerifier = generateRandomString(64);
-            window.localStorage.setItem('code_verifier', codeVerifier);
+            lsSet('code_verifier', codeVerifier);
             const hashed = await sha256(codeVerifier);
             const codeChallenge = base64encode(hashed);
 
@@ -481,7 +512,7 @@
         }
 
         async function getToken(code) {
-            const codeVerifier = localStorage.getItem('code_verifier');
+            const codeVerifier = lsGet('code_verifier');
 
             // Clean the code out of the URL immediately so a refresh can't reuse it
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -508,7 +539,7 @@
                 const response = await body.json();
 
                 if (response.access_token) {
-                    localStorage.setItem('spotify_access_token', response.access_token);
+                    lsSet('spotify_access_token', response.access_token);
                     accessToken = response.access_token;
                     showApp();
                 } else {
@@ -544,9 +575,9 @@
         }
 
         // --- SETTINGS ---
-        let pregameAudioData = localStorage.getItem('pregame_audio_data');
-        let pregameFileName = localStorage.getItem('pregame_file_name');
-        let logoData = localStorage.getItem('logo_data');
+        let pregameAudioData = lsGet('pregame_audio_data');
+        let pregameFileName = lsGet('pregame_file_name');
+        let logoData = lsGet('logo_data');
 
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
@@ -566,7 +597,7 @@
             reader.onload = (e) => {
                 try {
                     logoData = e.target.result;
-                    localStorage.setItem('logo_data', logoData);
+                    lsSet('logo_data', logoData);
                     applyLogo();
                     updateLogoStatus();
                 } catch (err) {
@@ -608,8 +639,8 @@
                 try {
                     pregameAudioData = e.target.result;
                     pregameFileName = file.name;
-                    localStorage.setItem('pregame_audio_data', pregameAudioData);
-                    localStorage.setItem('pregame_file_name', pregameFileName);
+                    lsSet('pregame_audio_data', pregameAudioData);
+                    lsSet('pregame_file_name', pregameFileName);
                     updatePregameFileStatus();
                 } catch (err) {
                     alert('File too large for storage. Try a smaller audio file.');
@@ -712,7 +743,7 @@
                 if (response.status === 404) {
                     alert("No active Spotify device found. Open Spotify on your phone and press play once to activate it.");
                 } else if (response.status === 401) {
-                    localStorage.removeItem('spotify_access_token');
+                    lsRemove('spotify_access_token');
                     accessToken = null;
                     checkAuth();
                 } else {
