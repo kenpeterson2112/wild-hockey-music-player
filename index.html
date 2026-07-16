@@ -256,12 +256,17 @@
             margin: 8px 0;
             cursor: pointer;
             transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         .track-item:active {
             background: #1DB954;
             border-color: #1DB954;
             transform: scale(0.98);
         }
+        .track-info { min-width: 0; }
         .track-name { font-weight: 700; font-size: 1.05rem; }
         .track-uri {
             font-size: 0.8rem;
@@ -270,6 +275,27 @@
             word-break: break-all;
             margin-top: 4px;
         }
+        .play-count {
+            flex-shrink: 0;
+            background: #2c313d;
+            color: #9db0e0;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 5px 12px;
+            border-radius: 999px;
+        }
+        .settings-btn-action {
+            width: 100%;
+            padding: 12px;
+            background: #2c313d;
+            border: 1px solid #3a4150;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .settings-btn-action:active { filter: brightness(1.25); }
         .settings-body { padding: 20px; overflow-y: auto; }
         .settings-section { margin-bottom: 24px; }
         .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
@@ -361,6 +387,13 @@
                     <p>Upload an audio file to play for the pregame announcement</p>
                     <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()">
                     <div id="pregame-file-status" class="status-line"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Play Counts</h3>
+                    <p>Zero out how many times each track has been played, for a new game</p>
+                    <button class="settings-btn-action" onclick="resetPlayCounts()">Reset play counter</button>
+                    <div id="reset-status" class="status-line"></div>
                 </div>
             </div>
         </div>
@@ -576,9 +609,28 @@
         let pregameAudioData = lsGet('pregame_audio_data');
         let pregameFileName = lsGet('pregame_file_name');
 
+        // --- PLAY COUNTS (per track URI, persisted for the game) ---
+        let playCounts = {};
+        try { playCounts = JSON.parse(lsGet('play_counts') || '{}') || {}; } catch (e) { playCounts = {}; }
+
+        function incrementPlayCount(uri) {
+            if (!uri) return;
+            playCounts[uri] = (playCounts[uri] || 0) + 1;
+            lsSet('play_counts', JSON.stringify(playCounts));
+        }
+
+        function resetPlayCounts() {
+            playCounts = {};
+            lsSet('play_counts', JSON.stringify(playCounts));
+            const el = document.getElementById('reset-status');
+            if (el) { el.textContent = '✓ Play counts reset to zero'; el.style.color = '#1DB954'; }
+        }
+
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
+            const el = document.getElementById('reset-status');
+            if (el) el.textContent = '';
         }
 
         function closeSettings() {
@@ -649,16 +701,28 @@
                 const item = document.createElement('div');
                 item.className = 'track-item';
 
+                const info = document.createElement('div');
+                info.className = 'track-info';
+
                 const nameEl = document.createElement('div');
                 nameEl.className = 'track-name';
                 nameEl.textContent = name;
-                item.appendChild(nameEl);
+                info.appendChild(nameEl);
 
                 if (startMs > 0) {
                     const startEl = document.createElement('div');
                     startEl.className = 'track-uri';
                     startEl.textContent = `Starts at ${startSec}s`;
-                    item.appendChild(startEl);
+                    info.appendChild(startEl);
+                }
+                item.appendChild(info);
+
+                const count = playCounts[uri] || 0;
+                if (count > 0) {
+                    const badge = document.createElement('div');
+                    badge.className = 'play-count';
+                    badge.textContent = count + 'x';
+                    item.appendChild(badge);
                 }
 
                 item.onclick = () => playTrack(uri, name, startMs);
@@ -724,6 +788,7 @@
                     accessToken = null;
                     checkAuth();
                 } else {
+                    incrementPlayCount(uri);
                     updateNowPlaying(trackName);
                     closeTrackSelector();
                 }
