@@ -34,7 +34,8 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            flex-grow: 1;
+            flex-grow: 0;
+            flex-shrink: 1;
             min-height: 0;
         }
         button {
@@ -68,17 +69,19 @@
             justify-content: center;
             text-align: center;
             min-height: 0;
+            max-height: 100px;
         }
         .btn-stop {
             grid-column: span 2;
             background-color: #e02424;
-            padding: clamp(15px, 2vh, 35px);
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            padding: clamp(20px, 4vh, 40px);
+            font-size: clamp(1.3rem, 3.5vw, 2rem);
             text-transform: uppercase;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: clamp(60px, 10vh, 100px);
         }
         .btn-login {
             background-color: #1DB954;
