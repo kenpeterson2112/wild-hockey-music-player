@@ -321,7 +321,8 @@
         .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
         .settings-section p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .settings-section input[type="file"],
-        .settings-section input[type="text"] {
+        .settings-section input[type="text"],
+        .settings-section select {
             width: 100%;
             padding: 11px;
             background: #20232c;
@@ -330,7 +331,31 @@
             color: white;
             font-family: inherit;
         }
+        .settings-section input + input,
+        .settings-section select,
+        .settings-section .settings-btn-action { margin-top: 8px; }
         .status-line { margin-top: 10px; font-size: 0.85rem; color: #8a8f9c; }
+        .track-remove {
+            flex-shrink: 0;
+            background: #3a2c31;
+            border: 1px solid #5a2c34;
+            color: #ff8da0;
+            border-radius: 8px;
+            width: 34px;
+            height: 34px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .track-remove:active { filter: brightness(1.25); }
+        .track-right {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
@@ -405,6 +430,17 @@
                 <button class="modal-close" onclick="closeSettings()">✕</button>
             </div>
             <div class="settings-body">
+                <div class="settings-section">
+                    <h3>Add Custom Song</h3>
+                    <p>Paste a Spotify song link, name it, and pick a button. It's saved on this device and shows up in that button's list next to the built-in songs.</p>
+                    <input type="text" id="custom-link-input" placeholder="Paste Spotify song link">
+                    <input type="text" id="custom-name-input" placeholder="Song name">
+                    <select id="custom-category-select"></select>
+                    <input type="text" id="custom-start-input" placeholder="Start time m:ss (optional)">
+                    <button class="settings-btn-action" onclick="addCustomTrack()">Add song</button>
+                    <div id="custom-add-status" class="status-line"></div>
+                </div>
+
                 <div class="settings-section">
                     <h3>Spotify Connection</h3>
                     <p>The connection renews itself automatically. Tap here if playback ever stops responding.</p>
@@ -756,11 +792,114 @@
             if (el) { el.textContent = '✓ Play counts reset to zero'; el.style.color = '#1DB954'; }
         }
 
+        // --- CUSTOM ON-DEVICE TRACKS (added via pasted Spotify link) ---
+        // Same shape as window.TRACKS: { <categoryKey>: [ {uri, name, startSec?} ] }
+        // Stored only in this browser; never touches the repo track list.
+        let customTracks = {};
+        try { customTracks = JSON.parse(lsGet('custom_tracks') || '{}') || {}; } catch (e) { customTracks = {}; }
+
+        // Button categories: key (internal) -> label (shown to the user)
+        const CATEGORIES = [
+            ['pregame', 'Pregame'],
+            ['whistles', 'Between Whistles'],
+            ['goalFor', 'Goal FOR'],
+            ['goalAgainst', 'Goal AGAINST'],
+            ['penaltyFor', 'Powerplay'],
+            ['penaltyAgainst', 'Penalty Kill'],
+            ['endGame', 'End Game Intensity']
+        ];
+
+        function saveCustomTracks() {
+            lsSet('custom_tracks', JSON.stringify(customTracks));
+        }
+
+        // Accept a share link, a spotify:track: URI, or a bare 22-char ID.
+        function parseSpotifyTrackId(input) {
+            if (!input) return null;
+            const s = String(input).trim();
+            let m = s.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/);
+            if (m) return 'spotify:track:' + m[1];
+            m = s.match(/spotify:track:([A-Za-z0-9]+)/);
+            if (m) return 'spotify:track:' + m[1];
+            m = s.match(/^[A-Za-z0-9]{22}$/);
+            if (m) return 'spotify:track:' + s;
+            return null;
+        }
+
+        // "m:ss" or "mm:ss" (or plain seconds) -> whole seconds; blank/0 -> 0
+        function parseStartTime(v) {
+            if (!v) return 0;
+            const s = String(v).trim();
+            if (!s) return 0;
+            if (s.indexOf(':') === -1) {
+                const n = parseInt(s, 10);
+                return isNaN(n) || n < 0 ? 0 : n;
+            }
+            const parts = s.split(':');
+            const mins = parseInt(parts[0], 10);
+            const secs = parseInt(parts[1], 10);
+            if (isNaN(mins) || isNaN(secs)) return 0;
+            const total = mins * 60 + secs;
+            return total < 0 ? 0 : total;
+        }
+
+        function populateCategorySelect() {
+            const sel = document.getElementById('custom-category-select');
+            if (!sel || sel.options.length) return;
+            CATEGORIES.forEach(([key, label]) => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = label;
+                sel.appendChild(opt);
+            });
+        }
+
+        function categoryLabel(key) {
+            const found = CATEGORIES.find(c => c[0] === key);
+            return found ? found[1] : key;
+        }
+
+        function addCustomTrack() {
+            const status = document.getElementById('custom-add-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+
+            const uri = parseSpotifyTrackId(document.getElementById('custom-link-input').value);
+            const name = document.getElementById('custom-name-input').value.trim();
+            const category = document.getElementById('custom-category-select').value;
+            const startSec = parseStartTime(document.getElementById('custom-start-input').value);
+
+            if (!uri) return setStatus("That doesn't look like a Spotify song link.", false);
+            if (!name) return setStatus('Please enter a song name.', false);
+            if (!category) return setStatus('Please pick a button.', false);
+
+            const entry = { uri: uri, name: name };
+            if (startSec > 0) entry.startSec = startSec;
+
+            if (!customTracks[category]) customTracks[category] = [];
+            customTracks[category].push(entry);
+            saveCustomTracks();
+
+            document.getElementById('custom-link-input').value = '';
+            document.getElementById('custom-name-input').value = '';
+            document.getElementById('custom-start-input').value = '';
+            setStatus('✓ Added "' + name + '" to ' + categoryLabel(category), true);
+        }
+
+        function removeCustomTrack(category, index) {
+            if (customTracks[category]) {
+                customTracks[category].splice(index, 1);
+                saveCustomTracks();
+            }
+        }
+
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
+            populateCategorySelect();
             const el = document.getElementById('reset-status');
             if (el) el.textContent = '';
+            const cs = document.getElementById('custom-add-status');
+            if (cs) cs.textContent = '';
         }
 
         function closeSettings() {
@@ -813,18 +952,25 @@
             const trackList = document.getElementById('track-list');
             trackList.innerHTML = '';
 
-            const categoryTracks = tracks[category] || [];
-            if (categoryTracks.length === 0) {
+            // Combine built-in repo tracks with this device's custom tracks
+            const repoTracks = tracks[category] || [];
+            const custom = customTracks[category] || [];
+            const entries = repoTracks.map(t => ({ track: t, isCustom: false }))
+                .concat(custom.map((t, i) => ({ track: t, isCustom: true, customIndex: i })));
+
+            if (entries.length === 0) {
                 const note = document.createElement('div');
                 note.style.cssText = 'padding:20px;color:#8a8f9c;text-align:center;';
                 note.textContent = window.TRACKS
-                    ? 'No tracks set up for this button yet. Add Spotify URIs to this category in index.html.'
+                    ? 'No songs for this button yet. Add one under ⚙️ Settings → Add Custom Song, or in index.html.'
                     : 'Track list failed to load — check index.html for a typo (usually a missing comma or quote) in the TRACKS block.';
                 trackList.appendChild(note);
             }
-            categoryTracks.forEach((track, index) => {
+
+            entries.forEach((entry) => {
+                const track = entry.track;
                 const uri = typeof track === 'string' ? track : track.uri;
-                const name = typeof track === 'string' ? `Track ${index + 1}` : (track.name || `Track ${index + 1}`);
+                const name = typeof track === 'string' ? 'Track' : (track.name || 'Track');
                 const startSec = typeof track === 'object' ? track.startSec : undefined;
                 const startMs = (typeof startSec === 'number' && startSec > 0) ? Math.round(startSec * 1000) : 0;
 
@@ -839,21 +985,42 @@
                 nameEl.textContent = name;
                 info.appendChild(nameEl);
 
-                if (startMs > 0) {
-                    const startEl = document.createElement('div');
-                    startEl.className = 'track-uri';
-                    startEl.textContent = `Starts at ${startSec}s`;
-                    info.appendChild(startEl);
+                const subParts = [];
+                if (entry.isCustom) subParts.push('Custom');
+                if (startMs > 0) subParts.push(`starts at ${startSec}s`);
+                if (subParts.length) {
+                    const subEl = document.createElement('div');
+                    subEl.className = 'track-uri';
+                    subEl.textContent = subParts.join(' · ');
+                    info.appendChild(subEl);
                 }
                 item.appendChild(info);
+
+                const right = document.createElement('div');
+                right.className = 'track-right';
 
                 const count = playCounts[uri] || 0;
                 if (count > 0) {
                     const badge = document.createElement('div');
                     badge.className = 'play-count';
                     badge.textContent = count + 'x';
-                    item.appendChild(badge);
+                    right.appendChild(badge);
                 }
+
+                if (entry.isCustom) {
+                    const del = document.createElement('button');
+                    del.className = 'track-remove';
+                    del.textContent = '✕';
+                    del.title = 'Remove this custom song';
+                    del.onclick = (e) => {
+                        e.stopPropagation();
+                        removeCustomTrack(category, entry.customIndex);
+                        openTrackSelector(category, label); // refresh list
+                    };
+                    right.appendChild(del);
+                }
+
+                if (right.childNodes.length) item.appendChild(right);
 
                 item.onclick = () => playTrack(uri, name, startMs);
                 trackList.appendChild(item);
