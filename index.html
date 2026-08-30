@@ -442,6 +442,19 @@
                 </div>
 
                 <div class="settings-section">
+                    <h3>Library Management</h3>
+                    <p>Songs you add on this device live only here. <b>Export</b> to back them up, share with someone, or send to have them added to the app's built-in list. Then <b>Reset</b> so this device just mirrors the built-in list.</p>
+                    <div id="library-count" class="status-line"></div>
+                    <button class="settings-btn-action" onclick="exportCustomTracks()">Export custom songs</button>
+                    <input type="file" id="import-file-input" accept="application/json,.json" onchange="handleImportFileSelect()">
+                    <button class="settings-btn-action" onclick="applyImport('add')">Add to my list</button>
+                    <button class="settings-btn-action" onclick="applyImport('replace')">Replace my list</button>
+                    <div id="import-status" class="status-line"></div>
+                    <button class="settings-btn-action" id="reset-ondevice-btn" onclick="resetOnDeviceSongs()">Reset on-device songs</button>
+                    <div id="library-reset-status" class="status-line"></div>
+                </div>
+
+                <div class="settings-section">
                     <h3>Spotify Connection</h3>
                     <p>The connection renews itself automatically. Tap here if playback ever stops responding.</p>
                     <button class="settings-btn-action" onclick="resyncSpotify()">Reconnect to Spotify</button>
@@ -892,6 +905,164 @@
             }
         }
 
+        // --- EXPORT / IMPORT CUSTOM SONGS (JSON file) ---
+        const EXPORT_APP_ID = 'wild-hockey-music-player';
+        let pendingImport = null; // sanitized {cat:[...]} awaiting Add/Replace
+
+        function customTrackCount(store) {
+            return Object.keys(store || {}).reduce((n, k) => n + (store[k] ? store[k].length : 0), 0);
+        }
+
+        function buildExportJson() {
+            return JSON.stringify({
+                app: EXPORT_APP_ID,
+                type: 'custom-songs',
+                version: 1,
+                customTracks: customTracks
+            }, null, 2);
+        }
+
+        function exportCustomTracks() {
+            const status = document.getElementById('import-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            try {
+                const blob = new Blob([buildExportJson()], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'wild-soundboard-custom-songs.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                const n = customTrackCount(customTracks);
+                setStatus(n ? ('✓ Exported ' + n + ' custom song' + (n === 1 ? '' : 's')) : 'Exported (no custom songs yet)', true);
+            } catch (e) {
+                console.error('Export failed:', e);
+                setStatus('Export failed on this device.', false);
+            }
+        }
+
+        // Accept the wrapped payload or a bare {cat:[...]} object; keep only
+        // valid categories and well-formed entries. Returns {clean, count}.
+        function sanitizeImported(obj) {
+            const source = (obj && obj.customTracks && typeof obj.customTracks === 'object') ? obj.customTracks : obj;
+            const clean = {};
+            let count = 0;
+            if (!source || typeof source !== 'object') return { clean, count };
+            CATEGORIES.forEach(([key]) => {
+                const arr = source[key];
+                if (!Array.isArray(arr)) return;
+                arr.forEach((entry) => {
+                    if (!entry || typeof entry !== 'object') return;
+                    const uri = parseSpotifyTrackId(entry.uri);
+                    const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+                    if (!uri || !name) return;
+                    const out = { uri: uri, name: name };
+                    if (typeof entry.startSec === 'number' && entry.startSec > 0) out.startSec = Math.round(entry.startSec);
+                    if (!clean[key]) clean[key] = [];
+                    clean[key].push(out);
+                    count++;
+                });
+            });
+            return { clean, count };
+        }
+
+        function handleImportFileSelect() {
+            const status = document.getElementById('import-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const input = document.getElementById('import-file-input');
+            const file = input.files[0];
+            pendingImport = null;
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let parsed;
+                try { parsed = JSON.parse(e.target.result); }
+                catch (err) { return setStatus("Couldn't read that file — is it a soundboard export?", false); }
+                const { clean, count } = sanitizeImported(parsed);
+                if (count === 0) return setStatus('No valid custom songs found in that file.', false);
+                pendingImport = clean;
+                setStatus('Loaded ' + count + ' song' + (count === 1 ? '' : 's') + ' — choose Add or Replace.', true);
+            };
+            reader.onerror = () => setStatus("Couldn't read that file.", false);
+            reader.readAsText(file);
+            input.value = ''; // allow re-picking the same file later
+        }
+
+        function applyImport(mode) {
+            const status = document.getElementById('import-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            if (!pendingImport) return setStatus('Pick a file to import first.', false);
+
+            let added = 0, skipped = 0;
+            if (mode === 'replace') {
+                const clone = {};
+                Object.keys(pendingImport).forEach(k => { clone[k] = pendingImport[k].slice(); added += pendingImport[k].length; });
+                customTracks = clone;
+            } else {
+                Object.keys(pendingImport).forEach((key) => {
+                    if (!customTracks[key]) customTracks[key] = [];
+                    const existing = new Set(customTracks[key].map(t => t.uri));
+                    pendingImport[key].forEach((entry) => {
+                        if (existing.has(entry.uri)) { skipped++; return; }
+                        customTracks[key].push(entry);
+                        existing.add(entry.uri);
+                        added++;
+                    });
+                });
+            }
+            saveCustomTracks();
+            pendingImport = null;
+            const verb = mode === 'replace' ? 'Replaced — ' : 'Added ';
+            setStatus('✓ ' + verb + added + ' song' + (added === 1 ? '' : 's') + (skipped ? (', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's')) : ''), true);
+            updateLibraryCount();
+        }
+
+        // --- RESET ON-DEVICE SONGS (two-tap confirm) ---
+        let resetArmed = false;
+        let resetTimer = null;
+
+        function updateLibraryCount() {
+            const el = document.getElementById('library-count');
+            if (!el) return;
+            const n = customTrackCount(customTracks);
+            el.textContent = n ? (n + ' custom song' + (n === 1 ? '' : 's') + ' saved on this device')
+                               : 'No custom songs on this device';
+            el.style.color = '#8a8f9c';
+        }
+
+        function disarmReset() {
+            resetArmed = false;
+            if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+            const btn = document.getElementById('reset-ondevice-btn');
+            if (btn) btn.textContent = 'Reset on-device songs';
+        }
+
+        function resetOnDeviceSongs() {
+            const status = document.getElementById('library-reset-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const btn = document.getElementById('reset-ondevice-btn');
+            const n = customTrackCount(customTracks);
+
+            if (n === 0) { disarmReset(); return setStatus('No on-device songs to clear.', false); }
+
+            if (!resetArmed) {
+                resetArmed = true;
+                if (btn) btn.textContent = 'Tap again to confirm';
+                setStatus('⚠ This deletes ' + n + ' on-device song' + (n === 1 ? '' : 's') + '. Export first! Tap again to confirm.', false);
+                resetTimer = setTimeout(() => { disarmReset(); setStatus('Reset cancelled.', false); }, 4000);
+                return;
+            }
+
+            // Confirmed
+            customTracks = {};
+            saveCustomTracks();
+            disarmReset();
+            updateLibraryCount();
+            setStatus('✓ Cleared ' + n + ' on-device song' + (n === 1 ? '' : 's') + ' — the app now shows built-in songs only.', true);
+        }
+
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
@@ -900,6 +1071,13 @@
             if (el) el.textContent = '';
             const cs = document.getElementById('custom-add-status');
             if (cs) cs.textContent = '';
+            const is = document.getElementById('import-status');
+            if (is) is.textContent = '';
+            pendingImport = null;
+            const rs = document.getElementById('library-reset-status');
+            if (rs) rs.textContent = '';
+            disarmReset();
+            updateLibraryCount();
         }
 
         function closeSettings() {
