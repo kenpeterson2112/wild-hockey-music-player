@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__github__pull_request_read",
+      "mcp__Claude_Code_Remote__subscribe_pr_activity",
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
+      "Bash(python3 scripts/export_songs_xlsx.py)",
+      "Bash(python3 scripts/import_songs_tsv.py *)"
+    ]
+  }
+}
