@@ -219,6 +219,7 @@ def main():
 
     INDEX_HTML.write_text(updated, encoding="utf-8")
     print(f"Updated {INDEX_HTML}")
+    print("\nNext: python scripts/build_tracklist.py   (refresh the public track list)")
 
 
 if __name__ == "__main__":

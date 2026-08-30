@@ -96,7 +96,24 @@ Before writing, the importer re-parses the block it is about to save and
 refuses to write if it doesn't round-trip, so a malformed edit can't take the
 app down on load.
 
-## 3. Export the current list
+## 3. Refresh the public track list
+
+After every import, regenerate the page people browse before submitting:
+
+```bash
+python scripts/build_tracklist.py
+```
+
+This writes `tracklist/index.html`, which GitHub Pages serves at
+`<site>/tracklist` — every song grouped by button, with a search box so people
+can check whether something is already in before requesting it. It is generated
+from `window.TRACKS`, so it can't drift out of sync with the app as long as you
+re-run it (the importer prints a reminder).
+
+To show a "Request a song" button linking to the form, set `FORM_URL` at the top
+of `scripts/build_tracklist.py` and re-run. Left blank, the button is omitted.
+
+## 4. Export the current list
 
 To get the current songs back out as a spreadsheet (for review, or to share
 with the coaching staff):
