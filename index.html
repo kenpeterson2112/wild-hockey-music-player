@@ -442,13 +442,16 @@
                 </div>
 
                 <div class="settings-section">
-                    <h3>Backup / Share Custom Songs</h3>
-                    <p>Export your custom songs to a file to back them up or send to someone. Import a file to add them to (or replace) your list — duplicates are skipped.</p>
+                    <h3>Library Management</h3>
+                    <p>Songs you add on this device live only here. <b>Export</b> to back them up, share with someone, or send to have them added to the app's built-in list. Then <b>Reset</b> so this device just mirrors the built-in list.</p>
+                    <div id="library-count" class="status-line"></div>
                     <button class="settings-btn-action" onclick="exportCustomTracks()">Export custom songs</button>
                     <input type="file" id="import-file-input" accept="application/json,.json" onchange="handleImportFileSelect()">
                     <button class="settings-btn-action" onclick="applyImport('add')">Add to my list</button>
                     <button class="settings-btn-action" onclick="applyImport('replace')">Replace my list</button>
                     <div id="import-status" class="status-line"></div>
+                    <button class="settings-btn-action" id="reset-ondevice-btn" onclick="resetOnDeviceSongs()">Reset on-device songs</button>
+                    <div id="library-reset-status" class="status-line"></div>
                 </div>
 
                 <div class="settings-section">
@@ -1013,6 +1016,51 @@
             pendingImport = null;
             const verb = mode === 'replace' ? 'Replaced — ' : 'Added ';
             setStatus('✓ ' + verb + added + ' song' + (added === 1 ? '' : 's') + (skipped ? (', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's')) : ''), true);
+            updateLibraryCount();
+        }
+
+        // --- RESET ON-DEVICE SONGS (two-tap confirm) ---
+        let resetArmed = false;
+        let resetTimer = null;
+
+        function updateLibraryCount() {
+            const el = document.getElementById('library-count');
+            if (!el) return;
+            const n = customTrackCount(customTracks);
+            el.textContent = n ? (n + ' custom song' + (n === 1 ? '' : 's') + ' saved on this device')
+                               : 'No custom songs on this device';
+            el.style.color = '#8a8f9c';
+        }
+
+        function disarmReset() {
+            resetArmed = false;
+            if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+            const btn = document.getElementById('reset-ondevice-btn');
+            if (btn) btn.textContent = 'Reset on-device songs';
+        }
+
+        function resetOnDeviceSongs() {
+            const status = document.getElementById('library-reset-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const btn = document.getElementById('reset-ondevice-btn');
+            const n = customTrackCount(customTracks);
+
+            if (n === 0) { disarmReset(); return setStatus('No on-device songs to clear.', false); }
+
+            if (!resetArmed) {
+                resetArmed = true;
+                if (btn) btn.textContent = 'Tap again to confirm';
+                setStatus('⚠ This deletes ' + n + ' on-device song' + (n === 1 ? '' : 's') + '. Export first! Tap again to confirm.', false);
+                resetTimer = setTimeout(() => { disarmReset(); setStatus('Reset cancelled.', false); }, 4000);
+                return;
+            }
+
+            // Confirmed
+            customTracks = {};
+            saveCustomTracks();
+            disarmReset();
+            updateLibraryCount();
+            setStatus('✓ Cleared ' + n + ' on-device song' + (n === 1 ? '' : 's') + ' — the app now shows built-in songs only.', true);
         }
 
         function openSettings() {
@@ -1026,6 +1074,10 @@
             const is = document.getElementById('import-status');
             if (is) is.textContent = '';
             pendingImport = null;
+            const rs = document.getElementById('library-reset-status');
+            if (rs) rs.textContent = '';
+            disarmReset();
+            updateLibraryCount();
         }
 
         function closeSettings() {
