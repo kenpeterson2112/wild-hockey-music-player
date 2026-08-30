@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track List &middot; Wild Soundboard</title>
+<meta name="description" content="Every song currently loaded in the Wild hockey soundboard, by game situation.">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(circle at 50% 0%, #1a2036 0%, #0d0f16 60%) fixed;
+    color: #fff;
+    margin: 0;
+    padding: 20px 16px 60px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: clamp(1.5rem, 5vw, 2rem); margin: 0 0 6px; }
+  .lede { color: #aab; margin: 0 0 20px; font-size: 0.95rem; }
+  .meta { color: #778; font-size: 0.8rem; margin: 0 0 20px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .btn {
+    display: inline-block; padding: 10px 16px; border-radius: 10px;
+    background: #1DB954; color: #fff; text-decoration: none; font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .btn.secondary { background: #262b3d; }
+  #search {
+    width: 100%; padding: 12px 14px; border-radius: 10px; margin-bottom: 8px;
+    border: 1px solid #2c3348; background: #161a27; color: #fff;
+    font-size: 1rem; font-family: inherit;
+  }
+  #search:focus { outline: 2px solid #1DB954; outline-offset: 1px; }
+  #count { color: #778; font-size: 0.8rem; min-height: 1.2em; margin-bottom: 18px; }
+  section { margin-bottom: 26px; }
+  h2 {
+    font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 0 0 10px; padding-left: 10px; border-left: 4px solid var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  h2 .n { color: #778; font-weight: 400; letter-spacing: 0; text-transform: none; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    padding: 9px 12px; border-radius: 8px; background: #161a27;
+    margin-bottom: 5px; border-left: 3px solid var(--accent);
+  }
+  li a { color: #fff; text-decoration: none; font-weight: 600; }
+  li a:hover { text-decoration: underline; }
+  .start {
+    color: #8b93a8; font-size: 0.78rem; font-variant-numeric: tabular-nums;
+    background: #0f131e; padding: 2px 7px; border-radius: 20px;
+  }
+  /* An author `display` rule outranks the UA style for [hidden], so the filter's
+     hidden attribute needs this to actually take items off the page. */
+  li[hidden], section[hidden] { display: none !important; }
+  .empty { color: #778; font-style: italic; padding: 9px 12px; }
+  #noresults { display: none; color: #778; font-style: italic; padding: 20px 0; }
+  footer { color: #667; font-size: 0.8rem; margin-top: 36px; border-top: 1px solid #232839; padding-top: 16px; }
+  footer a { color: #8b93a8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏒 Soundboard Track List</h1>
+  <p class="lede">Every song currently loaded, by game situation. Have a look before
+  submitting a request &mdash; if it is already here, no need to ask for it again.</p>
+  <p class="meta">39 songs &middot; updated August 30, 2026</p>
+
+  <div class="actions">
+    <a class="btn" href="https://docs.google.com/forms/d/e/1FAIpQLSeUBFtplwfdpaIjogPkoqI0tpRBn2GSETPbXL9H5Ox-5JuFIA/viewform" target="_blank" rel="noopener">Request a song</a>
+    <a class="btn secondary" href="../">Open the soundboard</a>
+  </div>
+
+  <input id="search" type="search" placeholder="Search songs…" autocomplete="off" aria-label="Search songs">
+  <div id="count" aria-live="polite"></div>
+
+  <section style="--accent: #1DB954">
+    <h2><span>📣</span>Pregame <span class="n" data-total="2">2</span></h2>
+    <ul>
+      <li data-name="pregame track"><a href="https://open.spotify.com/track/0pqnGHJpmpxLKifKRmU6WP" target="_blank" rel="noopener">Pregame Track</a></li>
+      <li data-name="brutal"><a href="https://open.spotify.com/track/6SRsiMl7w1USE4mFqrOhHC" target="_blank" rel="noopener">brutal</a><span class="start">from 1:00</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #a855f7">
+    <h2><span>🎵</span>Between Whistles <span class="n" data-total="27">27</span></h2>
+    <ul>
+      <li data-name="believer"><a href="https://open.spotify.com/track/0pqnGHJpmpxLKifKRmU6WP" target="_blank" rel="noopener">Believer</a></li>
+      <li data-name="ready for it?"><a href="https://open.spotify.com/track/2yLa0QULdQr0qAIvVwN6B5" target="_blank" rel="noopener">Ready for It?</a><span class="start">from 0:08</span></li>
+      <li data-name="let&#x27;s go"><a href="https://open.spotify.com/track/6RSuGXM9GVMdXaI8ifGm8d" target="_blank" rel="noopener">Let&#x27;s Go</a></li>
+      <li data-name="centuries"><a href="https://open.spotify.com/track/04aAxqtGp5pv12UXAg4pkq" target="_blank" rel="noopener">Centuries</a><span class="start">from 0:25</span></li>
+      <li data-name="turn down for what"><a href="https://open.spotify.com/track/67awxiNHNyjMXhVgsHuIrs" target="_blank" rel="noopener">Turn Down for What</a><span class="start">from 0:16</span></li>
+      <li data-name="danger zone"><a href="https://open.spotify.com/track/34x6hEJgGAOQvmlMql5Ige" target="_blank" rel="noopener">Danger Zone</a><span class="start">from 0:53</span></li>
+      <li data-name="tick tick boom"><a href="https://open.spotify.com/track/5nKdxWYQJTzJrHXWOSO9tO" target="_blank" rel="noopener">Tick Tick Boom</a><span class="start">from 0:12</span></li>
+      <li data-name="the hockey song"><a href="https://open.spotify.com/track/2g8q4vNuoVpLJGK17kVcoR" target="_blank" rel="noopener">The Hockey Song</a></li>
+      <li data-name="unstoppable"><a href="https://open.spotify.com/track/1yvMUkIOTeUNtNWlWRgANS" target="_blank" rel="noopener">Unstoppable</a><span class="start">from 3:05</span></li>
+      <li data-name="espresso"><a href="https://open.spotify.com/track/1vLqigPHwiFnXsfrLMehV1" target="_blank" rel="noopener">Espresso</a><span class="start">from 0:08</span></li>
+      <li data-name="let&#x27;s get it started"><a href="https://open.spotify.com/track/0EAARxHiL76Us70njzbItJ" target="_blank" rel="noopener">Let&#x27;s Get It Started</a><span class="start">from 0:50</span></li>
+      <li data-name="brutal"><a href="https://open.spotify.com/track/6SRsiMl7w1USE4mFqrOhHC" target="_blank" rel="noopener">brutal</a><span class="start">from 1:00</span></li>
+      <li data-name="kisses 1"><a href="https://open.spotify.com/track/2A1aS3mwuGuX2yk1bgxOvA" target="_blank" rel="noopener">Kisses 1</a><span class="start">from 0:35</span></li>
+      <li data-name="wild child"><a href="https://open.spotify.com/track/02bJ6uGeHKfNOhIc9qyA8e" target="_blank" rel="noopener">Wild child</a><span class="start">from 2:02</span></li>
+      <li data-name="runaway"><a href="https://open.spotify.com/track/4Nh7Umpl8YPFPcggcby6JW" target="_blank" rel="noopener">Runaway</a><span class="start">from 0:45</span></li>
+      <li data-name="chelsea dagger"><a href="https://open.spotify.com/track/0txisWocI2H8yPRjYxLo83" target="_blank" rel="noopener">Chelsea dagger</a><span class="start">from 3:06</span></li>
+      <li data-name="shoot to thrill"><a href="https://open.spotify.com/track/0C80GCp0mMuBzLf3EAXqxv" target="_blank" rel="noopener">Shoot to Thrill</a><span class="start">from 1:02</span></li>
+      <li data-name="9 to 5"><a href="https://open.spotify.com/track/4w3tQBXhn5345eUXDGBWZG" target="_blank" rel="noopener">9 to 5</a><span class="start">from 1:28</span></li>
+      <li data-name="lush life"><a href="https://open.spotify.com/track/0e6WPtkB9dwFiwspkEeen2" target="_blank" rel="noopener">Lush Life</a><span class="start">from 0:49</span></li>
+      <li data-name="pink pony club"><a href="https://open.spotify.com/track/1k2pQc5i348DCHwbn5KTdc" target="_blank" rel="noopener">pink pony club</a><span class="start">from 2:15</span></li>
+      <li data-name="the distance"><a href="https://open.spotify.com/track/1szwDbVdIdoQq5mG5GXAmJ" target="_blank" rel="noopener">the distance</a><span class="start">from 0:42</span></li>
+      <li data-name="wild thing"><a href="https://open.spotify.com/track/01lZlV0coZWuhzZpFQZ43u" target="_blank" rel="noopener">wild thing</a></li>
+      <li data-name="brass"><a href="https://open.spotify.com/track/03ZyPqIZXdBNNVIpM2KORq" target="_blank" rel="noopener">brass</a><span class="start">from 0:30</span></li>
+      <li data-name="get ready for this"><a href="https://open.spotify.com/track/5zyxpZ8xZmTuhXOuZq4KBG" target="_blank" rel="noopener">get ready for this</a><span class="start">from 0:25</span></li>
+      <li data-name="handclap"><a href="https://open.spotify.com/track/0y3fi7fknIXOxnkbUgzT3n" target="_blank" rel="noopener">handclap</a><span class="start">from 0:27</span></li>
+      <li data-name="rock n roll gary glitter"><a href="https://open.spotify.com/track/1t3mzpCfaMsEqL1Fbq46ST" target="_blank" rel="noopener">rock n roll gary glitter</a><span class="start">from 0:44</span></li>
+      <li data-name="legend"><a href="https://open.spotify.com/track/3SWqGa1J0M7hSBUDM0KePD" target="_blank" rel="noopener">legend</a><span class="start">from 0:16</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #1DB954">
+    <h2><span>🚨</span>Goal FOR <span class="n" data-total="2">2</span></h2>
+    <ul>
+      <li data-name="thunderstruck"><a href="https://open.spotify.com/track/57bgtoPSgt236HzfBOd8kj" target="_blank" rel="noopener">Thunderstruck</a><span class="start">from 2:38</span></li>
+      <li data-name="kickstart my heart"><a href="https://open.spotify.com/track/1ZipIhmm5baGBobKoAFWHE" target="_blank" rel="noopener">Kickstart my Heart</a><span class="start">from 1:03</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #e0455e">
+    <h2><span>🥅</span>Goal AGAINST <span class="n" data-total="2">2</span></h2>
+    <ul>
+      <li data-name="shake it off"><a href="https://open.spotify.com/track/3pv7Q5v2dpdefwdWIvE7yH" target="_blank" rel="noopener">Shake it Off</a><span class="start">from 0:41</span></li>
+      <li data-name="we&#x27;re not gonna take it"><a href="https://open.spotify.com/track/5X79VgaOn8pDTpTKu3PixN" target="_blank" rel="noopener">We&#x27;re not gonna take it</a><span class="start">from 0:46</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #3b82f6">
+    <h2><span>💪</span>Powerplay <span class="n" data-total="1">1</span></h2>
+    <ul>
+      <li data-name="fireball"><a href="https://open.spotify.com/track/4Y7XAxTANhu3lmnLAzhWJW" target="_blank" rel="noopener">Fireball</a><span class="start">from 1:32</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #f59e0b">
+    <h2><span>⚠️</span>Penalty Kill <span class="n" data-total="2">2</span></h2>
+    <ul>
+      <li data-name="i did something bad"><a href="https://open.spotify.com/track/4svZDCRz4cJoneBpjpx8DJ" target="_blank" rel="noopener">I Did Something Bad</a><span class="start">from 0:44</span></li>
+      <li data-name="bad girls"><a href="https://open.spotify.com/track/1ibRqifchaAfeNdQGpbRVW" target="_blank" rel="noopener">Bad Girls</a><span class="start">from 1:33</span></li>
+    </ul>
+  </section>
+
+  <section style="--accent: #fb7139">
+    <h2><span>🔥</span>End Game Intensity <span class="n" data-total="3">3</span></h2>
+    <ul>
+      <li data-name="final countdown"><a href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener">Final Countdown</a><span class="start">from 4:08</span></li>
+      <li data-name="knights of cydonia"><a href="https://open.spotify.com/track/7ouMYWpwJ422jRcDASZB7P" target="_blank" rel="noopener">Knights of Cydonia</a><span class="start">from 4:10</span></li>
+      <li data-name="immigrant song"><a href="https://open.spotify.com/track/78lgmZwycJ3nzsdgmPPGNx" target="_blank" rel="noopener">Immigrant Song</a><span class="start">from 0:01</span></li>
+    </ul>
+  </section>
+
+  <p id="noresults">No songs match that search.</p>
+
+  <footer>
+    Start times mark where a song begins playing, so it opens on the good part.
+    Songs with no time listed play from the beginning.<br>
+    Generated from the soundboard's own track list &mdash; <a href="../">back to the app</a>.
+  </footer>
+</div>
+
+<script>
+  // Filter the list as you type. Sections with no remaining matches hide entirely,
+  // so the page collapses to just what you searched for.
+  (function () {
+    var search = document.getElementById('search');
+    var count = document.getElementById('count');
+    var noresults = document.getElementById('noresults');
+    var sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+    var items = Array.prototype.slice.call(document.querySelectorAll('li[data-name]'));
+
+    function apply() {
+      var q = search.value.trim().toLowerCase();
+      var shown = 0;
+      items.forEach(function (li) {
+        var hit = !q || li.getAttribute('data-name').indexOf(q) !== -1;
+        li.hidden = !hit;
+        if (hit) shown++;
+      });
+      sections.forEach(function (s) {
+        var hits = s.querySelectorAll('li[data-name]:not([hidden])').length;
+        s.hidden = !!q && !hits;
+        // While filtering, the per-category badge counts matches rather than the
+        // category total, so it never reads as "2" beside a single result.
+        var badge = s.querySelector('h2 .n');
+        if (badge) badge.textContent = q ? hits : badge.getAttribute('data-total');
+      });
+      count.textContent = q ? (shown + (shown === 1 ? ' match' : ' matches')) : '';
+      noresults.style.display = (q && shown === 0) ? 'block' : 'none';
+    }
+
+    search.addEventListener('input', apply);
+    apply();
+  })();
+</script>
+</body>
+</html>
