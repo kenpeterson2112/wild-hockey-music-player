@@ -9,8 +9,6 @@ Usage:
     python scripts/export_songs_xlsx.py [output.xlsx]
 """
 
-import json
-import re
 import sys
 from pathlib import Path
 
@@ -18,66 +16,18 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-INDEX_HTML = REPO_ROOT / "index.html"
+from tracks_io import (
+    CATEGORY_LABELS,
+    INDEX_HTML,
+    REPO_ROOT,
+    extract_tracks,
+    format_start_time,
+    spotify_url,
+)
+
 DEFAULT_OUTPUT = REPO_ROOT / "wild-hockey-songs.xlsx"
 
-# Category key -> label shown on the buttons, mirroring CATEGORIES in index.html.
-CATEGORY_LABELS = {
-    "pregame": "Pregame",
-    "whistles": "Between Whistles",
-    "goalFor": "Goal FOR",
-    "goalAgainst": "Goal AGAINST",
-    "penaltyFor": "Powerplay",
-    "penaltyAgainst": "Penalty Kill",
-    "endGame": "End Game Intensity",
-}
-
 HEADERS = ["Song Name", "Spotify Link", "Category", "Start Time"]
-
-
-def extract_tracks(html: str) -> dict:
-    """Pull the window.TRACKS object literal out of index.html as a dict."""
-    match = re.search(r"window\.TRACKS\s*=\s*(\{.*?\});", html, re.DOTALL)
-    if not match:
-        raise SystemExit("Could not find the window.TRACKS block in index.html")
-
-    body = match.group(1)
-
-    # The block is JS, not JSON: single-quoted strings and bare keys. Tokenize so
-    # a colon inside a string (spotify:track:...) is never mistaken for a key.
-    token = re.compile(
-        r"'(?:[^'\\]|\\.)*'"  # single-quoted string
-        r"|\"(?:[^\"\\]|\\.)*\""  # double-quoted string
-        r"|[A-Za-z_][A-Za-z0-9_]*(?=\s*:)"  # bare key
-    )
-
-    def normalize(m):
-        text = m.group(0)
-        if text[0] == "'":
-            return json.dumps(text[1:-1].replace("\\'", "'"))
-        if text[0] == '"':
-            return text
-        return json.dumps(text)
-
-    body = token.sub(normalize, body)
-    body = re.sub(r",(\s*[}\]])", r"\1", body)  # drop trailing commas
-    return json.loads(body)
-
-
-def spotify_link(uri: str) -> str:
-    """spotify:track:ID -> https://open.spotify.com/track/ID"""
-    if uri.startswith("spotify:track:"):
-        return "https://open.spotify.com/track/" + uri.split(":")[-1]
-    return uri
-
-
-def format_start(start_sec) -> str:
-    """Seconds -> m:ss, blank when the track starts at the beginning."""
-    if start_sec in (None, "", 0):
-        return ""
-    seconds = int(start_sec)
-    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 def build_rows(tracks: dict) -> list:
@@ -88,9 +38,9 @@ def build_rows(tracks: dict) -> list:
             rows.append(
                 [
                     entry.get("name", ""),
-                    spotify_link(entry.get("uri", "")),
+                    spotify_url(entry.get("uri", "")),
                     label,
-                    format_start(entry.get("startSec")),
+                    format_start_time(entry.get("startSec")),
                 ]
             )
     return rows
