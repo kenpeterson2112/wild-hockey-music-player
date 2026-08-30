@@ -26,9 +26,13 @@ from tracks_io import (
 
 OUTPUT = REPO_ROOT / "tracklist" / "index.html"
 
-# Set this to the Google Form URL to show a "Request a song" button on the page.
-# Left blank, the button is omitted entirely.
-FORM_URL = ""
+# The song-request form, linked from a button on the page. Left blank, the button
+# is omitted entirely.
+#
+# Keep this the bare /viewform URL. The link Google hands you when you copy it
+# carries a `ouid=` parameter identifying the Google account that copied it,
+# which has no business on a public page.
+FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeUBFtplwfdpaIjogPkoqI0tpRBn2GSETPbXL9H5Ox-5JuFIA/viewform"
 
 # Emoji and accent colour per category, matching the app's buttons in index.html.
 CATEGORY_STYLE = {
