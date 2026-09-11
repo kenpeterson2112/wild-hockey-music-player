@@ -356,6 +356,25 @@
             align-items: center;
             gap: 8px;
         }
+        .device-item {
+            background: #20232c;
+            border: 2px solid #2c313d;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin: 6px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .device-item.selected {
+            border-color: #1DB954;
+            background: #14351f;
+        }
+        .device-item .device-name { font-weight: 700; }
+        .device-item .device-meta { font-size: 0.78rem; color: #8a8f9c; margin-top: 2px; }
+        .device-check { color: #1DB954; font-weight: 700; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -452,6 +471,14 @@
                     <div id="import-status" class="status-line"></div>
                     <button class="settings-btn-action" id="reset-ondevice-btn" onclick="resetOnDeviceSongs()">Reset on-device songs</button>
                     <div id="library-reset-status" class="status-line"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Playback Device</h3>
+                    <p>Choose which device the music plays on. Open Spotify on that device first so it shows up here, then tap it.</p>
+                    <div id="device-list"></div>
+                    <button class="settings-btn-action" onclick="loadDevices()">Refresh devices</button>
+                    <div id="device-status" class="status-line"></div>
                 </div>
 
                 <div class="settings-section">
@@ -1118,6 +1145,7 @@
             if (rs) rs.textContent = '';
             disarmReset();
             updateLibraryCount();
+            loadDevices();
         }
 
         function closeSettings() {
@@ -1280,6 +1308,97 @@
         }
 
         // --- PLAYBACK CONTROLS ---
+        // --- PLAYBACK DEVICE PICKER ---
+        // Spotify plays on whichever device is "active"; this lets the user pin
+        // playback to a specific device (e.g. their phone) so it doesn't land on
+        // a computer that happens to be open.
+        let selectedDeviceId = lsGet('spotify_device_id');
+        let selectedDeviceName = lsGet('spotify_device_name');
+
+        async function loadDevices() {
+            const status = document.getElementById('device-status');
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            if (!accessToken) return setStatus('Connect to Spotify first.', false);
+            await ensureFreshToken();
+            try {
+                const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!res.ok) return setStatus('Could not load devices (tap Reconnect and try again).', false);
+                const data = await res.json();
+                const devices = (data && data.devices) || [];
+                renderDevices(devices);
+                if (devices.length === 0) {
+                    setStatus('No devices found. Open the Spotify app on the device you want, then tap Refresh.', false);
+                } else if (selectedDeviceName) {
+                    setStatus('Playing on: ' + selectedDeviceName, true);
+                } else {
+                    setStatus('Tap the device you want the music to play on.', true);
+                }
+            } catch (e) {
+                console.error('Device load failed:', e);
+                setStatus('Could not reach Spotify to list devices.', false);
+            }
+        }
+
+        function renderDevices(devices) {
+            const list = document.getElementById('device-list');
+            if (!list) return;
+            list.innerHTML = '';
+            devices.forEach((d) => {
+                const item = document.createElement('div');
+                item.className = 'device-item' + (d.id === selectedDeviceId ? ' selected' : '');
+
+                const info = document.createElement('div');
+                const nameEl = document.createElement('div');
+                nameEl.className = 'device-name';
+                nameEl.textContent = d.name || 'Unknown device';
+                info.appendChild(nameEl);
+                const metaEl = document.createElement('div');
+                metaEl.className = 'device-meta';
+                metaEl.textContent = (d.type || 'Device') + (d.is_active ? ' · currently active' : '');
+                info.appendChild(metaEl);
+                item.appendChild(info);
+
+                if (d.id === selectedDeviceId) {
+                    const chk = document.createElement('div');
+                    chk.className = 'device-check';
+                    chk.textContent = '✓';
+                    item.appendChild(chk);
+                }
+
+                item.onclick = () => selectDevice(d.id, d.name);
+                list.appendChild(item);
+            });
+        }
+
+        function selectDevice(id, name) {
+            selectedDeviceId = id;
+            selectedDeviceName = name || '';
+            lsSet('spotify_device_id', id || '');
+            lsSet('spotify_device_name', selectedDeviceName);
+            const status = document.getElementById('device-status');
+            if (status) { status.textContent = '✓ Music will play on: ' + selectedDeviceName; status.style.color = '#1DB954'; }
+            // Re-highlight the list
+            const list = document.getElementById('device-list');
+            if (list) Array.from(list.children).forEach((el) => el.classList.toggle('selected', false));
+            renderDevicesHighlight();
+        }
+
+        function renderDevicesHighlight() {
+            // Lightweight re-mark without refetching: rebuild selection styling
+            const list = document.getElementById('device-list');
+            if (!list) return;
+            Array.from(list.children).forEach((el) => {
+                const nameEl = el.querySelector('.device-name');
+                const isSel = nameEl && nameEl.textContent === selectedDeviceName;
+                el.classList.toggle('selected', !!isSel);
+                let chk = el.querySelector('.device-check');
+                if (isSel && !chk) { chk = document.createElement('div'); chk.className = 'device-check'; chk.textContent = '✓'; el.appendChild(chk); }
+                if (!isSel && chk) chk.remove();
+            });
+        }
+
         async function playTrack(uri, trackName, startMs) {
             if (!accessToken) return alert("Please log in first!");
             await ensureFreshToken();
@@ -1287,7 +1406,9 @@
             const body = { uris: [uri] };
             if (startMs > 0) body.position_ms = startMs;
 
-            const doPlay = () => fetch('https://api.spotify.com/v1/me/player/play', {
+            const playUrl = 'https://api.spotify.com/v1/me/player/play'
+                + (selectedDeviceId ? ('?device_id=' + encodeURIComponent(selectedDeviceId)) : '');
+            const doPlay = () => fetch(playUrl, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -1307,7 +1428,16 @@
                 }
 
                 if (response.status === 404) {
-                    alert("No active Spotify device found. Open Spotify on your phone and press play once to activate it.");
+                    if (selectedDeviceId) {
+                        // The pinned device went away (e.g. Spotify closed on it) — clear it
+                        selectedDeviceId = null;
+                        selectedDeviceName = '';
+                        lsRemove('spotify_device_id');
+                        lsRemove('spotify_device_name');
+                        alert('"' + (trackName || 'That song') + '" couldn\'t play — your chosen device isn\'t available. Open Spotify on that device, then pick it again under ⚙️ Settings → Playback Device.');
+                    } else {
+                        alert("No active Spotify device found. Open Spotify on your phone and press play once to activate it, then pick it under Settings → Playback Device.");
+                    }
                 } else if (response.status === 401) {
                     lsRemove('spotify_access_token');
                     accessToken = null;
@@ -1343,7 +1473,9 @@
             await ensureFreshToken();
 
             try {
-                await fetch('https://api.spotify.com/v1/me/player/pause', {
+                const pauseUrl = 'https://api.spotify.com/v1/me/player/pause'
+                    + (selectedDeviceId ? ('?device_id=' + encodeURIComponent(selectedDeviceId)) : '');
+                await fetch(pauseUrl, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
