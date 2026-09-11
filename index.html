@@ -1416,6 +1416,39 @@
             renderDevices(lastDevices); // re-render so the ✓ moves cleanly
         }
 
+        // Which device should own playback? The pinned one, else the currently
+        // active one (looked up live so "Use whatever is active" is real).
+        async function resolveTargetDeviceId() {
+            if (selectedDeviceId) return selectedDeviceId;
+            try {
+                const r = await fetch('https://api.spotify.com/v1/me/player/devices', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!r.ok) return null;
+                const d = await r.json();
+                const list = (d && d.devices) || [];
+                const active = list.find(x => x.is_active) || list[0];
+                return active ? active.id : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // The real Spotify Connect handoff — the same thing the "Connect to a
+        // device" menu does. Makes the target device own the playback session
+        // and wake its audio engine. Mobile clients (Android especially) need
+        // this before they'll honor a "play this track" command.
+        function transferPlayback(deviceId) {
+            return fetch('https://api.spotify.com/v1/me/player', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ device_ids: [deviceId], play: false })
+            });
+        }
+
         async function playTrack(uri, trackName, startMs) {
             if (!accessToken) return alert("Please log in first!");
             await ensureFreshToken();
@@ -1423,8 +1456,28 @@
             const body = { uris: [uri] };
             if (startMs > 0) body.position_ms = startMs;
 
+            // 1) Hand the session to the target device (Connect handoff), then
+            // 2) tell that device to play the track.
+            const targetId = await resolveTargetDeviceId();
+            if (targetId) {
+                try {
+                    const t = await transferPlayback(targetId);
+                    if (t.status === 404 && selectedDeviceId) {
+                        // Pinned device vanished — drop the pin so we fall back to active
+                        selectedDeviceId = null;
+                        selectedDeviceName = '';
+                        lsRemove('spotify_device_id');
+                        lsRemove('spotify_device_name');
+                    }
+                } catch (e) {
+                    console.error('Transfer failed:', e);
+                }
+                // Give the device a beat to take ownership before the play command
+                await new Promise(r => setTimeout(r, 400));
+            }
+
             const playUrl = 'https://api.spotify.com/v1/me/player/play'
-                + (selectedDeviceId ? ('?device_id=' + encodeURIComponent(selectedDeviceId)) : '');
+                + (targetId ? ('?device_id=' + encodeURIComponent(targetId)) : '');
             const doPlay = () => fetch(playUrl, {
                 method: 'PUT',
                 headers: {
