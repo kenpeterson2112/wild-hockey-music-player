@@ -1449,32 +1449,44 @@
             });
         }
 
+        // Track uri -> its album uri, so we can play within a context. Cached so
+        // each song is looked up once per session.
+        const albumCache = {};
+        async function resolveAlbumContext(trackUri) {
+            if (albumCache[trackUri]) return albumCache[trackUri];
+            const id = (trackUri || '').split(':').pop();
+            if (!id) return null;
+            try {
+                const r = await fetch('https://api.spotify.com/v1/tracks/' + encodeURIComponent(id), {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!r.ok) return null;
+                const t = await r.json();
+                const albumUri = t && t.album && t.album.uri;
+                if (albumUri) albumCache[trackUri] = albumUri;
+                return albumUri || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
         async function playTrack(uri, trackName, startMs) {
             if (!accessToken) return alert("Please log in first!");
             await ensureFreshToken();
 
-            const body = { uris: [uri] };
+            // Play the song INSIDE its album context (context_uri + offset) rather
+            // than as a bare list of track uris. Spotify's own clients start tracks
+            // this way, and Android's Connect handling is robust for a context but
+            // flaky for an ad-hoc uris list (reports "playing" but stays silent).
+            const albumUri = await resolveAlbumContext(uri);
+            const body = albumUri
+                ? { context_uri: albumUri, offset: { uri: uri } }
+                : { uris: [uri] }; // fallback if the lookup fails
             if (startMs > 0) body.position_ms = startMs;
 
-            // 1) Hand the session to the target device (Connect handoff), then
-            // 2) tell that device to play the track.
+            // Target the pinned device, else the live active one. Passing device_id
+            // on the play call transfers playback there implicitly.
             const targetId = await resolveTargetDeviceId();
-            if (targetId) {
-                try {
-                    const t = await transferPlayback(targetId);
-                    if (t.status === 404 && selectedDeviceId) {
-                        // Pinned device vanished — drop the pin so we fall back to active
-                        selectedDeviceId = null;
-                        selectedDeviceName = '';
-                        lsRemove('spotify_device_id');
-                        lsRemove('spotify_device_name');
-                    }
-                } catch (e) {
-                    console.error('Transfer failed:', e);
-                }
-                // Give the device a beat to take ownership before the play command
-                await new Promise(r => setTimeout(r, 400));
-            }
 
             const playUrl = 'https://api.spotify.com/v1/me/player/play'
                 + (targetId ? ('?device_id=' + encodeURIComponent(targetId)) : '');
