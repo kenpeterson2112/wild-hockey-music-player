@@ -1463,9 +1463,19 @@
                     incrementPlayCount(uri);
                     updateNowPlaying(trackName);
                     closeTrackSelector();
+                } else {
+                    // Surface whatever Spotify actually said, so problems are visible
+                    let reason = '';
+                    try { const j = await response.json(); reason = (j && j.error && (j.error.reason || j.error.message)) || ''; } catch (e) {}
+                    if (response.status === 403) {
+                        alert("Spotify blocked playback (403" + (reason ? ": " + reason : "") + ").\n\nThis almost always means the account isn't Spotify Premium — controlling playback from an app requires Premium.");
+                    } else {
+                        alert("Couldn't play — Spotify error " + response.status + (reason ? " (" + reason + ")" : "") + ".");
+                    }
                 }
             } catch (error) {
                 console.error("Error playing track:", error);
+                alert("Couldn't reach Spotify to play that. Check your connection and the ⚙️ connection status.");
             }
         }
 
