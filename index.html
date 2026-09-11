@@ -1309,11 +1309,12 @@
 
         // --- PLAYBACK CONTROLS ---
         // --- PLAYBACK DEVICE PICKER ---
-        // Spotify plays on whichever device is "active"; this lets the user pin
-        // playback to a specific device (e.g. their phone) so it doesn't land on
-        // a computer that happens to be open.
-        let selectedDeviceId = lsGet('spotify_device_id');
-        let selectedDeviceName = lsGet('spotify_device_name');
+        // Spotify plays on whichever device is "active". By default we don't pin
+        // a device (target the active one — best when you're on your phone). The
+        // user can pin a specific device if a computer keeps stealing playback.
+        let selectedDeviceId = lsGet('spotify_device_id') || null;
+        let selectedDeviceName = lsGet('spotify_device_name') || '';
+        let lastDevices = [];
 
         async function loadDevices() {
             const status = document.getElementById('device-status');
@@ -1326,14 +1327,24 @@
                 });
                 if (!res.ok) return setStatus('Could not load devices (tap Reconnect and try again).', false);
                 const data = await res.json();
-                const devices = (data && data.devices) || [];
-                renderDevices(devices);
-                if (devices.length === 0) {
+                lastDevices = (data && data.devices) || [];
+
+                // If a pinned device is no longer available, drop the stale pin so
+                // playback falls back to the active device instead of a dead one.
+                if (selectedDeviceId && !lastDevices.some(d => d.id === selectedDeviceId)) {
+                    selectedDeviceId = null;
+                    selectedDeviceName = '';
+                    lsRemove('spotify_device_id');
+                    lsRemove('spotify_device_name');
+                }
+
+                renderDevices(lastDevices);
+                if (lastDevices.length === 0) {
                     setStatus('No devices found. Open the Spotify app on the device you want, then tap Refresh.', false);
-                } else if (selectedDeviceName) {
-                    setStatus('Playing on: ' + selectedDeviceName, true);
+                } else if (selectedDeviceId) {
+                    setStatus('Pinned to: ' + selectedDeviceName, true);
                 } else {
-                    setStatus('Tap the device you want the music to play on.', true);
+                    setStatus('Playing on whatever device is active. Tap a device to pin it.', true);
                 }
             } catch (e) {
                 console.error('Device load failed:', e);
@@ -1341,62 +1352,68 @@
             }
         }
 
+        function makeDeviceRow(name, meta, isSelected, onClick) {
+            const item = document.createElement('div');
+            item.className = 'device-item' + (isSelected ? ' selected' : '');
+            const info = document.createElement('div');
+            const nameEl = document.createElement('div');
+            nameEl.className = 'device-name';
+            nameEl.textContent = name;
+            info.appendChild(nameEl);
+            const metaEl = document.createElement('div');
+            metaEl.className = 'device-meta';
+            metaEl.textContent = meta;
+            info.appendChild(metaEl);
+            item.appendChild(info);
+            if (isSelected) {
+                const chk = document.createElement('div');
+                chk.className = 'device-check';
+                chk.textContent = '✓';
+                item.appendChild(chk);
+            }
+            item.onclick = onClick;
+            return item;
+        }
+
         function renderDevices(devices) {
             const list = document.getElementById('device-list');
             if (!list) return;
             list.innerHTML = '';
+            // "No pin" option first — target whatever Spotify device is active
+            list.appendChild(makeDeviceRow(
+                'Use whatever is active',
+                'No pinned device — recommended when you play on your phone',
+                !selectedDeviceId,
+                () => selectDevice(null, '')
+            ));
             devices.forEach((d) => {
-                const item = document.createElement('div');
-                item.className = 'device-item' + (d.id === selectedDeviceId ? ' selected' : '');
-
-                const info = document.createElement('div');
-                const nameEl = document.createElement('div');
-                nameEl.className = 'device-name';
-                nameEl.textContent = d.name || 'Unknown device';
-                info.appendChild(nameEl);
-                const metaEl = document.createElement('div');
-                metaEl.className = 'device-meta';
-                metaEl.textContent = (d.type || 'Device') + (d.is_active ? ' · currently active' : '');
-                info.appendChild(metaEl);
-                item.appendChild(info);
-
-                if (d.id === selectedDeviceId) {
-                    const chk = document.createElement('div');
-                    chk.className = 'device-check';
-                    chk.textContent = '✓';
-                    item.appendChild(chk);
-                }
-
-                item.onclick = () => selectDevice(d.id, d.name);
-                list.appendChild(item);
+                list.appendChild(makeDeviceRow(
+                    d.name || 'Unknown device',
+                    (d.type || 'Device') + (d.is_active ? ' · currently active' : ''),
+                    d.id === selectedDeviceId,
+                    () => selectDevice(d.id, d.name)
+                ));
             });
         }
 
         function selectDevice(id, name) {
-            selectedDeviceId = id;
+            selectedDeviceId = id || null;
             selectedDeviceName = name || '';
-            lsSet('spotify_device_id', id || '');
-            lsSet('spotify_device_name', selectedDeviceName);
+            if (selectedDeviceId) {
+                lsSet('spotify_device_id', selectedDeviceId);
+                lsSet('spotify_device_name', selectedDeviceName);
+            } else {
+                lsRemove('spotify_device_id');
+                lsRemove('spotify_device_name');
+            }
             const status = document.getElementById('device-status');
-            if (status) { status.textContent = '✓ Music will play on: ' + selectedDeviceName; status.style.color = '#1DB954'; }
-            // Re-highlight the list
-            const list = document.getElementById('device-list');
-            if (list) Array.from(list.children).forEach((el) => el.classList.toggle('selected', false));
-            renderDevicesHighlight();
-        }
-
-        function renderDevicesHighlight() {
-            // Lightweight re-mark without refetching: rebuild selection styling
-            const list = document.getElementById('device-list');
-            if (!list) return;
-            Array.from(list.children).forEach((el) => {
-                const nameEl = el.querySelector('.device-name');
-                const isSel = nameEl && nameEl.textContent === selectedDeviceName;
-                el.classList.toggle('selected', !!isSel);
-                let chk = el.querySelector('.device-check');
-                if (isSel && !chk) { chk = document.createElement('div'); chk.className = 'device-check'; chk.textContent = '✓'; el.appendChild(chk); }
-                if (!isSel && chk) chk.remove();
-            });
+            if (status) {
+                status.textContent = selectedDeviceId
+                    ? ('✓ Pinned to: ' + selectedDeviceName)
+                    : '✓ Using whatever device is active.';
+                status.style.color = '#1DB954';
+            }
+            renderDevices(lastDevices); // re-render so the ✓ moves cleanly
         }
 
         async function playTrack(uri, trackName, startMs) {
