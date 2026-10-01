@@ -292,6 +292,13 @@
         }
         .chip .chip-n { opacity: 0.6; font-weight: 500; margin-left: 4px; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
+        .list-divider {
+            display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
+        }
+        .list-divider::before, .list-divider::after { content: ""; flex: 1; height: 1px; background: #3a4150; }
+        .list-divider .n { font-weight: 500; opacity: 0.7; }
+        .track-item.dim { opacity: 0.72; }
         .hide-played { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #aeb3be; padding: 4px 2px 10px; }
         .hide-played input { width: 18px; height: 18px; }
         .track-item {
@@ -1467,22 +1474,35 @@
             chips.appendChild(makeChip('All', songs.length, pickerTags.size === 0, () => toggleTag(null)));
             chipTags.forEach(t => chips.appendChild(makeChip(tagLabel(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t))));
 
-            // --- filter the list
-            let shown = songs.filter(sg => Array.from(pickerTags).every(t => sg.tags.has(t)));
-            const hiddenPlayed = hidePlayed ? shown.filter(sg => (playCounts[sg.uri] || 0) > 0).length : 0;
-            if (hidePlayed) shown = shown.filter(sg => !((playCounts[sg.uri] || 0) > 0));
+            // --- filter, then split into three groups (a song is in exactly one):
+            //   available -> not queued and not played yet (top, no heading)
+            //   queued    -> already sitting in a queue slot
+            //   played    -> played this game (hidden when "Hide songs already played" is on)
+            const queuedBy = new Map(); // uri -> labels of the slots holding it
+            QUEUE_SLOTS.forEach((sl) => {
+                const q = queueState[sl.id];
+                if (q && q.uri) queuedBy.set(q.uri, (queuedBy.get(q.uri) || []).concat(sl.label));
+            });
+            const matching = songs.filter(sg => Array.from(pickerTags).every(t => sg.tags.has(t)));
+            const isQueued = sg => queuedBy.has(sg.uri);
+            const isPlayed = sg => (playCounts[sg.uri] || 0) > 0;
+            const queued = matching.filter(isQueued);
+            const playedAll = matching.filter(sg => !isQueued(sg) && isPlayed(sg));
+            const available = matching.filter(sg => !isQueued(sg) && !isPlayed(sg));
+            const played = hidePlayed ? [] : playedAll;
+            const shownCount = available.length + queued.length + played.length;
 
             const trackList = document.getElementById('track-list');
             trackList.innerHTML = '';
 
-            if (shown.length === 0) {
+            if (shownCount === 0) {
                 const note = document.createElement('div');
                 note.style.cssText = 'padding:20px;color:#8a8f9c;text-align:center;';
                 if (songs.length === 0) {
                     note.textContent = window.TRACKS
                         ? 'No songs yet. Add one under ⚙️ Settings → Add Custom Song, or in index.html.'
                         : 'Track list failed to load — check index.html for a typo (usually a missing comma or quote) in the TRACKS block.';
-                } else if (hiddenPlayed > 0) {
+                } else if (hidePlayed && playedAll.length > 0) {
                     note.textContent = 'Every song here has already been played. Turn off "Hide songs already played" to see them.';
                 } else {
                     note.textContent = 'No songs have all of those tags. Tap a tag to remove it, or tap All.';
@@ -1490,14 +1510,23 @@
                 trackList.appendChild(note);
             }
 
-            shown.forEach((song) => {
+            const addDivider = (text, n) => {
+                const d = document.createElement('div');
+                d.className = 'list-divider';
+                d.appendChild(document.createTextNode(text));
+                const sp = document.createElement('span'); sp.className = 'n'; sp.textContent = '(' + n + ')';
+                d.appendChild(sp);
+                trackList.appendChild(d);
+            };
+
+            const addRow = (song, dim) => {
                 const uri = song.uri;
                 const name = song.name;
                 const startSec = song.startSec;
                 const startMs = (typeof startSec === 'number' && startSec > 0) ? Math.round(startSec * 1000) : 0;
 
                 const item = document.createElement('div');
-                item.className = 'track-item';
+                item.className = 'track-item' + (dim ? ' dim' : '');
 
                 const info = document.createElement('div');
                 info.className = 'track-info';
@@ -1508,6 +1537,7 @@
                 info.appendChild(nameEl);
 
                 const subParts = [];
+                if (queuedBy.has(uri)) subParts.push('In ' + queuedBy.get(uri).join(' + '));
                 if (song.inCustom && !song.inRepo) subParts.push('Custom');
                 if (startMs > 0) subParts.push(`starts at ${startSec}s`);
                 const freeOnly = Array.from(song.tags).filter(t => !catKeys.includes(t));
@@ -1555,7 +1585,11 @@
                     }
                 };
                 trackList.appendChild(item);
-            });
+            };
+
+            available.forEach(sg => addRow(sg, false));
+            if (queued.length) { addDivider('Already queued', queued.length); queued.forEach(sg => addRow(sg, true)); }
+            if (played.length) { addDivider('Already played', played.length); played.forEach(sg => addRow(sg, true)); }
         }
 
         function closeTrackSelector() {
@@ -1615,6 +1649,10 @@
         }
 
         function assignSlot(slotId, entry) {
+            // A song sits in one slot at a time: picking it here moves it from any other.
+            Object.keys(queueState).forEach((k) => {
+                if (k !== slotId && queueState[k] && queueState[k].uri === entry.uri) delete queueState[k];
+            });
             queueState[slotId] = entry;
             saveQueue();
             renderQueue();
