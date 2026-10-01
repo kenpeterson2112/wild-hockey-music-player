@@ -133,6 +133,21 @@
             height: 4px;
             background: var(--accent, #555);
         }
+        .slot { position: relative; min-height: 0; display: flex; }
+        .slot .btn-grid { flex: 1 1 auto; width: 100%; padding: 6px 30px 6px 8px; }
+        .slot-cat { font-size: 0.68rem; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad; font-weight: 600; }
+        .slot-song {
+            font-size: clamp(0.95rem, 3vw, 1.2rem); line-height: 1.15; font-weight: 700;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            max-width: 100%; word-break: break-word;
+        }
+        .slot.empty .btn-grid { border-style: dashed; }
+        .slot.empty .slot-song { color: #8a8f9c; font-weight: 600; }
+        .slot-edit {
+            position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; padding: 0;
+            border-radius: 10px; background: #2c313d; border: 1px solid #3a4150; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center; z-index: 2;
+        }
         .btn-grid .emoji {
             font-size: clamp(1.3rem, 5vw, 2rem);
             line-height: 1;
@@ -400,26 +415,7 @@
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
 
-        <div class="grid">
-            <button class="btn-grid accent-purple" onclick="openTrackSelector('whistles', 'Between Whistles')">
-                <span class="emoji">🎵</span>Between Whistles
-            </button>
-            <button class="btn-grid accent-green" onclick="openTrackSelector('goalFor', 'Goal FOR')">
-                <span class="emoji">🚨</span>Goal FOR
-            </button>
-            <button class="btn-grid accent-red" onclick="openTrackSelector('goalAgainst', 'Goal AGAINST')">
-                <span class="emoji">🥅</span>Goal AGAINST
-            </button>
-            <button class="btn-grid accent-blue" onclick="openTrackSelector('penaltyFor', 'Powerplay')">
-                <span class="emoji">💪</span>Powerplay
-            </button>
-            <button class="btn-grid accent-amber" onclick="openTrackSelector('penaltyAgainst', 'Penalty Kill')">
-                <span class="emoji">⚠️</span>Penalty Kill
-            </button>
-            <button class="btn-grid accent-orange" onclick="openTrackSelector('endGame', 'End Game Intensity')">
-                <span class="emoji">🔥</span>End Game Intensity
-            </button>
-        </div>
+        <div class="grid" id="queue-grid"></div>
 
         <div id="now-playing" class="now-playing">
             <div class="np-dot"></div>
@@ -1343,6 +1339,7 @@
 
         // --- TRACK SELECTOR MODAL ---
         let currentCategory = null;
+        let pickerSlotId = null; // when set, picking a song fills that queue slot instead of playing it
 
         function openTrackSelector(category, label) {
             if (!accessToken) return alert("Please log in first!");
@@ -1422,7 +1419,14 @@
 
                 if (right.childNodes.length) item.appendChild(right);
 
-                item.onclick = () => playTrack(uri, name, startMs);
+                item.onclick = () => {
+                    if (pickerSlotId) {
+                        assignSlot(pickerSlotId, { uri: uri, name: name, startSec: startSec > 0 ? startSec : undefined });
+                        closeTrackSelector();
+                    } else {
+                        playTrack(uri, name, startMs);
+                    }
+                };
                 trackList.appendChild(item);
             });
 
@@ -1432,6 +1436,89 @@
         function closeTrackSelector() {
             document.getElementById('track-modal').style.display = 'none';
             currentCategory = null;
+            pickerSlotId = null;
+        }
+
+        // --- GAME QUEUE (one-tap slots) ---
+        // Each slot holds one queued song. Tap a filled slot to play it (the slot
+        // then empties); tap an empty slot to choose a song; the pencil swaps one.
+        const QUEUE_SLOTS = [
+            { id: 'w1', cat: 'whistles',       label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
+            { id: 'w2', cat: 'whistles',       label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
+            { id: 'w3', cat: 'whistles',       label: 'Whistle 3',    emoji: '🎵', accent: 'purple' },
+            { id: 'pp', cat: 'penaltyFor',     label: 'Powerplay',    emoji: '💪', accent: 'blue' },
+            { id: 'gf', cat: 'goalFor',        label: 'Goal FOR',     emoji: '🚨', accent: 'green' },
+            { id: 'ga', cat: 'goalAgainst',    label: 'Goal AGAINST', emoji: '🥅', accent: 'red' },
+            { id: 'pk', cat: 'penaltyAgainst', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' },
+            { id: 'eg', cat: 'endGame',        label: 'End Game',     emoji: '🔥', accent: 'orange' }
+        ];
+        let queueState = {};
+        try { queueState = JSON.parse(lsGet('queue_slots') || '{}') || {}; } catch (e) { queueState = {}; }
+        let queueBusy = false;
+
+        function saveQueue() { lsSet('queue_slots', JSON.stringify(queueState)); }
+
+        function renderQueue() {
+            const grid = document.getElementById('queue-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            QUEUE_SLOTS.forEach((slot) => {
+                const entry = queueState[slot.id];
+                const wrap = document.createElement('div');
+                wrap.className = 'slot' + (entry ? '' : ' empty');
+
+                const main = document.createElement('button');
+                main.className = 'btn-grid accent-' + slot.accent;
+                const emoji = document.createElement('span'); emoji.className = 'emoji'; emoji.textContent = slot.emoji;
+                const cat = document.createElement('span'); cat.className = 'slot-cat'; cat.textContent = slot.label;
+                const song = document.createElement('span'); song.className = 'slot-song';
+                song.textContent = entry ? entry.name : '+ Choose song';
+                main.appendChild(emoji); main.appendChild(cat); main.appendChild(song);
+                main.onclick = () => (entry ? playSlot(slot.id) : editSlot(slot.id));
+                wrap.appendChild(main);
+
+                if (entry) {
+                    const edit = document.createElement('button');
+                    edit.className = 'slot-edit';
+                    edit.textContent = '✎';
+                    edit.title = 'Swap this song';
+                    edit.onclick = (e) => { e.stopPropagation(); editSlot(slot.id); };
+                    wrap.appendChild(edit);
+                }
+                grid.appendChild(wrap);
+            });
+        }
+
+        function assignSlot(slotId, entry) {
+            queueState[slotId] = entry;
+            saveQueue();
+            renderQueue();
+        }
+
+        function editSlot(slotId) {
+            const slot = QUEUE_SLOTS.find(x => x.id === slotId);
+            if (!slot) return;
+            pickerSlotId = slotId;
+            openTrackSelector(slot.cat, 'Choose: ' + slot.label);
+            // openTrackSelector bails out when logged out; don't leave picker mode armed
+            if (!accessToken) pickerSlotId = null;
+        }
+
+        async function playSlot(slotId) {
+            const entry = queueState[slotId];
+            if (!entry || queueBusy) return;
+            queueBusy = true;
+            try {
+                const startMs = entry.startSec > 0 ? Math.round(entry.startSec * 1000) : 0;
+                const ok = await playTrack(entry.uri, entry.name, startMs);
+                if (ok) {
+                    delete queueState[slotId]; // slot empties once its song has played
+                    saveQueue();
+                    renderQueue();
+                }
+            } finally {
+                queueBusy = false;
+            }
         }
 
         // --- PREGAME AUDIO ---
@@ -1763,6 +1850,7 @@
                     incrementPlayCount(uri);
                     updateNowPlaying(trackName);
                     closeTrackSelector();
+                    return true;
                 } else {
                     // Surface whatever Spotify actually said, so problems are visible
                     let reason = '';
@@ -1777,6 +1865,7 @@
                 console.error("Error playing track:", error);
                 alert("Couldn't reach Spotify to play that. Check your connection and the ⚙️ connection status.");
             }
+            return false;
         }
 
         function updateNowPlaying(trackName) {
@@ -1810,6 +1899,7 @@
 
         // --- Initialize ---
         try {
+            renderQueue();
             updatePregameFileStatus();
             cacheBuiltInPregame(false); // quietly save the announcement for offline use
             checkAuth();
