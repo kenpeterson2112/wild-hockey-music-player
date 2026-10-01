@@ -160,6 +160,9 @@ def render_tracks_block(tracks):
             ]
             if entry.get("startSec"):
                 parts.append(f"startSec: {int(entry['startSec'])}")
+            if entry.get("tags"):
+                tag_list = ", ".join(_js_string(str(x)) for x in entry["tags"])
+                parts.append(f"tags: [{tag_list}]")
             comma = "," if j < len(entries) - 1 else ""
             lines.append("                { " + ", ".join(parts) + " }" + comma)
         lines.append("            ]" + ("," if i < len(keys) - 1 else ""))
