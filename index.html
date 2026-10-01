@@ -299,8 +299,6 @@
         .list-divider::before, .list-divider::after { content: ""; flex: 1; height: 1px; background: #3a4150; }
         .list-divider .n { font-weight: 500; opacity: 0.7; }
         .track-item.dim { opacity: 0.72; }
-        .hide-played { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #aeb3be; padding: 4px 2px 10px; }
-        .hide-played input { width: 18px; height: 18px; }
         .track-item {
             background: #20232c;
             border: 2px solid #2c313d;
@@ -454,7 +452,6 @@
             </div>
             <div class="picker-filters">
                 <div id="tag-chips" class="tag-chips"></div>
-                <label class="hide-played"><input type="checkbox" id="hide-played" onchange="setHidePlayed(this.checked)"> Hide songs already played</label>
             </div>
             <div id="track-list" class="track-list"></div>
         </div>
@@ -1424,13 +1421,6 @@
 
         // Picker state: which tags are selected (all must match) and the played filter.
         let pickerTags = new Set();
-        let hidePlayed = lsGet('picker_hide_played') === '1';
-
-        function setHidePlayed(on) {
-            hidePlayed = !!on;
-            lsSet('picker_hide_played', hidePlayed ? '1' : '0');
-            renderSongPicker();
-        }
 
         function toggleTag(tag) {
             if (tag === null) pickerTags.clear();
@@ -1445,8 +1435,6 @@
             document.getElementById('track-modal-title').textContent = label;
             // Start filtered to the slot's category; tap the tag again (or All) to widen
             pickerTags = new Set(category ? [category] : []);
-            const hp = document.getElementById('hide-played');
-            if (hp) hp.checked = hidePlayed;
             renderSongPicker();
             document.getElementById('track-modal').style.display = 'flex';
         }
@@ -1477,7 +1465,7 @@
             // --- filter, then split into three groups (a song is in exactly one):
             //   available -> not queued and not played yet (top, no heading)
             //   queued    -> already sitting in a queue slot
-            //   played    -> played this game (hidden when "Hide songs already played" is on)
+            //   played    -> played this game (below the queued group)
             const queuedBy = new Map(); // uri -> labels of the slots holding it
             QUEUE_SLOTS.forEach((sl) => {
                 const q = queueState[sl.id];
@@ -1487,9 +1475,8 @@
             const isQueued = sg => queuedBy.has(sg.uri);
             const isPlayed = sg => (playCounts[sg.uri] || 0) > 0;
             const queued = matching.filter(isQueued);
-            const playedAll = matching.filter(sg => !isQueued(sg) && isPlayed(sg));
+            const played = matching.filter(sg => !isQueued(sg) && isPlayed(sg));
             const available = matching.filter(sg => !isQueued(sg) && !isPlayed(sg));
-            const played = hidePlayed ? [] : playedAll;
             const shownCount = available.length + queued.length + played.length;
 
             const trackList = document.getElementById('track-list');
@@ -1502,8 +1489,6 @@
                     note.textContent = window.TRACKS
                         ? 'No songs yet. Add one under ⚙️ Settings → Add Custom Song, or in index.html.'
                         : 'Track list failed to load — check index.html for a typo (usually a missing comma or quote) in the TRACKS block.';
-                } else if (hidePlayed && playedAll.length > 0) {
-                    note.textContent = 'Every song here has already been played. Turn off "Hide songs already played" to see them.';
                 } else {
                     note.textContent = 'No songs have all of those tags. Tap a tag to remove it, or tap All.';
                 }
