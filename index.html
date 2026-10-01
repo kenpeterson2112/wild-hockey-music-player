@@ -142,6 +142,15 @@
             max-width: 100%; word-break: break-word;
         }
         .slot.empty .btn-grid { border-style: dashed; }
+        .slot.active .btn-grid {
+            background: #2d3342; /* fallback where color-mix is unsupported */
+            background: color-mix(in srgb, var(--accent, #555) 30%, #23262e);
+            border-color: var(--accent, #555);
+            box-shadow: 0 0 0 2px var(--accent, #555), 0 0 22px 2px var(--accent, #555);
+        }
+        .slot.active .btn-grid::before { height: 6px; }
+        .slot.active .slot-cat { color: #fff; }
+        .slot.active .slot-song { color: #fff; }
         .slot.empty .slot-song { color: #8a8f9c; font-weight: 600; }
         .slot-edit {
             position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; padding: 0;
@@ -1584,8 +1593,10 @@
         }
 
         // --- GAME QUEUE (one-tap slots) ---
-        // Each slot holds one queued song. Tap a filled slot to play it (the slot
-        // then empties); tap an empty slot to choose a song; the pencil swaps one.
+        // Each slot holds one queued song. Tap a filled slot to play it: its song
+        // stays on the tile and the tile glows while it is the one playing. Stop
+        // Music is what clears that tile. Tap an empty slot to choose a song; the
+        // pencil swaps one.
         const QUEUE_SLOTS = [
             { id: 'w1', cat: 'whistles',       label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
             { id: 'w2', cat: 'whistles',       label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
@@ -1599,6 +1610,7 @@
         let queueState = {};
         try { queueState = JSON.parse(lsGet('queue_slots') || '{}') || {}; } catch (e) { queueState = {}; }
         let queueBusy = false;
+        let activeSlotId = null; // the tile whose song is playing now (not saved across reloads)
 
         function saveQueue() { lsSet('queue_slots', JSON.stringify(queueState)); }
 
@@ -1609,12 +1621,13 @@
             QUEUE_SLOTS.forEach((slot) => {
                 const entry = queueState[slot.id];
                 const wrap = document.createElement('div');
-                wrap.className = 'slot' + (entry ? '' : ' empty');
+                const isActive = !!entry && activeSlotId === slot.id;
+                wrap.className = 'slot' + (entry ? '' : ' empty') + (isActive ? ' active' : '');
 
                 const main = document.createElement('button');
                 main.className = 'btn-grid accent-' + slot.accent;
                 const emoji = document.createElement('span'); emoji.className = 'emoji'; emoji.textContent = slot.emoji;
-                const cat = document.createElement('span'); cat.className = 'slot-cat'; cat.textContent = slot.label;
+                const cat = document.createElement('span'); cat.className = 'slot-cat'; cat.textContent = (isActive ? '▶ ' : '') + slot.label;
                 const song = document.createElement('span'); song.className = 'slot-song';
                 song.textContent = entry ? entry.name : '+ Choose song';
                 main.appendChild(emoji); main.appendChild(cat); main.appendChild(song);
@@ -1636,8 +1649,12 @@
         function assignSlot(slotId, entry) {
             // A song sits in one slot at a time: picking it here moves it from any other.
             Object.keys(queueState).forEach((k) => {
-                if (k !== slotId && queueState[k] && queueState[k].uri === entry.uri) delete queueState[k];
+                if (k !== slotId && queueState[k] && queueState[k].uri === entry.uri) {
+                    delete queueState[k];
+                    if (k === activeSlotId) activeSlotId = null;
+                }
             });
+            if (slotId === activeSlotId) activeSlotId = null; // swapped song: tile no longer matches what is playing
             queueState[slotId] = entry;
             saveQueue();
             renderQueue();
@@ -1660,8 +1677,7 @@
                 const startMs = entry.startSec > 0 ? Math.round(entry.startSec * 1000) : 0;
                 const ok = await playTrack(entry.uri, entry.name, startMs);
                 if (ok) {
-                    delete queueState[slotId]; // slot empties once its song has played
-                    saveQueue();
+                    activeSlotId = slotId; // song stays on the tile; Stop Music clears it
                     renderQueue();
                 }
             } finally {
@@ -2029,6 +2045,14 @@
             const nowPlaying = document.getElementById('now-playing');
             document.getElementById('now-playing-track').textContent = 'Nothing';
             nowPlaying.classList.remove('playing');
+
+            // Stop Music is what clears the tile that was playing
+            if (activeSlotId) {
+                delete queueState[activeSlotId];
+                activeSlotId = null;
+                saveQueue();
+                renderQueue();
+            }
 
             if (!accessToken) return;
             await ensureFreshToken();
