@@ -489,9 +489,13 @@
                 </div>
 
                 <div class="settings-section">
-                    <h3>Pregame Audio File</h3>
-                    <p>Upload an audio file to play for the pregame announcement. Choosing a
-                    file replaces the one before it. Remove it to go back to the Spotify list.</p>
+                    <h3>Pregame Announcement</h3>
+                    <p>The Pregame button plays the announcement built into the app. Tap below
+                    before the game to save it on this phone so it plays with no signal.</p>
+                    <button class="settings-btn-action" onclick="cacheBuiltInPregame(true)">Save announcement for offline</button>
+                    <div id="pregame-cache-status" class="status-line"></div>
+                    <p style="margin-top:16px;">Optional: upload your own file to use instead.
+                    Remove it to go back to the built-in announcement.</p>
                     <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()">
                     <button class="settings-btn-action" id="pregame-remove-btn" style="display: none;" onclick="removePregameFile()">Remove file</button>
                     <div id="pregame-file-status" class="status-line"></div>
@@ -1216,6 +1220,7 @@
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
+            refreshCacheStatus();
             populateCategorySelect();
             const el = document.getElementById('reset-status');
             if (el) el.textContent = '';
@@ -1285,7 +1290,7 @@
                 updatePregameFileStatus();
             } catch (err) {
                 console.error('Could not save the announcement:', err);
-                pregameNotice = 'That file could not be saved, so the Pregame button uses Spotify for now.';
+                pregameNotice = 'That file could not be saved, so the Pregame button uses the built-in announcement.';
                 updatePregameFileStatus();
                 alert(`Could not save "${file.name}" (${formatFileSize(file.size)}).\n\n`
                     + 'This browser refused to store a file that size. A shorter clip, or the same '
@@ -1295,7 +1300,7 @@
 
         async function removePregameFile() {
             if (!pregameAudioData && !pregameFileName) {
-                setPregameStatus('No file to remove — the Pregame button already uses Spotify.', '#8a8f9c');
+                setPregameStatus('No uploaded file to remove — the Pregame button already uses the built-in announcement.', '#8a8f9c');
                 return;
             }
             const removed = pregameFileName;
@@ -1306,7 +1311,7 @@
             try {
                 await pregameDelete();
                 updatePregameFileStatus();
-                setPregameStatus(`✓ Removed ${removed || 'the saved file'} — the Pregame button now uses Spotify.`, '#1DB954');
+                setPregameStatus(`✓ Removed ${removed || 'the saved file'} — the Pregame button now uses the built-in announcement.`, '#1DB954');
             } catch (err) {
                 console.error('Could not remove the announcement:', err);
                 updatePregameFileStatus();
@@ -1326,12 +1331,12 @@
             const removeBtn = document.getElementById('pregame-remove-btn');
 
             if (pregameFileName) {
-                setPregameStatus(`✓ Playing: ${pregameFileName}`, '#1DB954');
+                setPregameStatus(`✓ Using your uploaded file: ${pregameFileName}`, '#1DB954');
                 if (pregameBtn) pregameBtn.classList.remove('no-track');
                 if (removeBtn) removeBtn.style.display = '';
             } else {
-                setPregameStatus(pregameNotice || 'No file selected - will use Spotify', pregameNotice ? '#f59e0b' : '#8a8f9c');
-                if (pregameBtn) pregameBtn.classList.add('no-track');
+                setPregameStatus(pregameNotice || 'Using the built-in announcement', pregameNotice ? '#f59e0b' : '#8a8f9c');
+                if (pregameBtn) pregameBtn.classList.remove('no-track');
                 if (removeBtn) removeBtn.style.display = 'none';
             }
         }
@@ -1439,25 +1444,92 @@
             // keeps an early tap from falling through to the Spotify list.
             try { await pregameReady; } catch (err) { /* handled at load */ }
 
+            // An uploaded file wins; otherwise play the announcement built into the app.
             if (pregameAudioData) {
-                playPregameAudio();
-            } else {
-                openTrackSelector('pregame', 'Pregame Announcement');
+                playPregameAudio(pregameAudioData, pregameFileName || 'Pregame Announcement');
+                return;
             }
+            const src = await builtInPregameSrc();
+            playPregameAudio(src, 'Pregame Announcement');
         }
 
-        function playPregameAudio() {
+        function playPregameAudio(src, label) {
             if (!pregameAudioElement) {
                 pregameAudioElement = new Audio();
             }
 
-            pregameAudioElement.src = pregameAudioData;
+            pregameAudioElement.src = src;
             pregameAudioElement.play().catch(err => {
                 console.error('Error playing pregame audio:', err);
-                alert('Error playing audio file');
+                alert('Could not play the pregame announcement. Check your connection and try again.');
             });
 
-            updateNowPlaying(pregameFileName || 'Pregame Announcement');
+            updateNowPlaying(label);
+        }
+
+        // --- BUILT-IN PREGAME ANNOUNCEMENT (lives in the repo, cached on the phone) ---
+        // Versioned file name: to replace it, add pregame-v2.mp3 and change this one
+        // line. The new name can never be served stale from an old cache.
+        const BUILTIN_PREGAME_URL = 'audio/pregame-v1.mp3';
+        const PREGAME_CACHE = 'pregame-audio';
+        let builtInObjectUrl = null;
+
+        function setCacheStatus(text, color) {
+            const el = document.getElementById('pregame-cache-status');
+            if (el) { el.textContent = text; el.style.color = color; }
+        }
+
+        // Save the announcement in the browser's Cache API so it plays with no signal.
+        // Quiet at startup; the Settings button passes verbose=true to report the result.
+        async function cacheBuiltInPregame(verbose) {
+            if (!('caches' in window)) {
+                if (verbose) setCacheStatus('This browser cannot save it for offline; it will play when you have signal.', '#f59e0b');
+                return false;
+            }
+            try {
+                if (verbose) setCacheStatus('Saving…', '#8a8f9c');
+                const cache = await caches.open(PREGAME_CACHE);
+                if (!(await cache.match(BUILTIN_PREGAME_URL))) {
+                    await cache.add(BUILTIN_PREGAME_URL);
+                }
+                // Drop any older announcement file left from a previous version
+                const keys = await cache.keys();
+                for (const req of keys) {
+                    if (!req.url.endsWith(BUILTIN_PREGAME_URL)) await cache.delete(req);
+                }
+                if (verbose) setCacheStatus('✓ Saved on this phone — plays with no signal.', '#1DB954');
+                return true;
+            } catch (err) {
+                console.error('Could not cache the pregame announcement:', err);
+                if (verbose) setCacheStatus('Could not save it (no signal?). Try again with a connection.', '#e0455e');
+                return false;
+            }
+        }
+
+        async function refreshCacheStatus() {
+            if (!('caches' in window)) return;
+            try {
+                const cache = await caches.open(PREGAME_CACHE);
+                const saved = !!(await cache.match(BUILTIN_PREGAME_URL));
+                setCacheStatus(saved ? '✓ Saved on this phone — plays with no signal.' : 'Not saved on this phone yet.', saved ? '#1DB954' : '#f59e0b');
+            } catch (err) { /* status only */ }
+        }
+
+        // Prefer the saved copy (works offline); fall back to fetching it from the site.
+        async function builtInPregameSrc() {
+            try {
+                if ('caches' in window) {
+                    const cache = await caches.open(PREGAME_CACHE);
+                    const hit = await cache.match(BUILTIN_PREGAME_URL);
+                    if (hit) {
+                        const blob = await hit.blob();
+                        if (builtInObjectUrl) URL.revokeObjectURL(builtInObjectUrl);
+                        builtInObjectUrl = URL.createObjectURL(blob);
+                        return builtInObjectUrl;
+                    }
+                }
+            } catch (err) { console.error('Cache read failed, using network copy:', err); }
+            return BUILTIN_PREGAME_URL;
         }
 
         function stopPregameAudio() {
@@ -1739,6 +1811,7 @@
         // --- Initialize ---
         try {
             updatePregameFileStatus();
+            cacheBuiltInPregame(false); // quietly save the announcement for offline use
             checkAuth();
         } catch (err) {
             console.error("Init error:", err);
