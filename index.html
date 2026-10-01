@@ -1425,7 +1425,9 @@
                 (tracks[key] || []).forEach(t => add(key, t, false));
                 (customTracks[key] || []).forEach(t => add(key, t, true));
             });
-            return Array.from(byUri.values());
+            return Array.from(byUri.values()).sort(
+                (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+            );
         }
 
         // Picker state: which tags are selected (all must match) and the played filter.
@@ -1442,8 +1444,8 @@
             if (!accessToken) return alert("Please log in first!");
             currentCategory = category;
             document.getElementById('track-modal-title').textContent = label;
-            // Start filtered to the slot's category; tap the tag again (or All) to widen
-            pickerTags = new Set(category ? [category] : []);
+            // Always open on the full list; the tag chips are there if you want to narrow it
+            pickerTags = new Set();
             renderSongPicker();
             document.getElementById('track-modal').style.display = 'flex';
         }
