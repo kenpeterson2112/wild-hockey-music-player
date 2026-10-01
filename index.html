@@ -1601,14 +1601,16 @@
             { id: 'w1', cat: 'whistles',       label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
             { id: 'w2', cat: 'whistles',       label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
             { id: 'w3', cat: 'whistles',       label: 'Whistle 3',    emoji: '🎵', accent: 'purple' },
-            { id: 'pp', cat: 'penaltyFor',     label: 'Powerplay',    emoji: '💪', accent: 'blue' },
+            { id: 'w4', cat: 'whistles',       label: 'Whistle 4',    emoji: '🎵', accent: 'purple' },
             { id: 'gf', cat: 'goalFor',        label: 'Goal FOR',     emoji: '🚨', accent: 'green' },
             { id: 'ga', cat: 'goalAgainst',    label: 'Goal AGAINST', emoji: '🥅', accent: 'red' },
-            { id: 'pk', cat: 'penaltyAgainst', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' },
-            { id: 'eg', cat: 'endGame',        label: 'End Game',     emoji: '🔥', accent: 'orange' }
+            { id: 'pp', cat: 'penaltyFor',     label: 'Powerplay',    emoji: '💪', accent: 'blue' },
+            { id: 'pk', cat: 'penaltyAgainst', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' }
         ];
         let queueState = {};
         try { queueState = JSON.parse(lsGet('queue_slots') || '{}') || {}; } catch (e) { queueState = {}; }
+        // Drop songs left in a slot that no longer exists (e.g. the old End Game tile)
+        Object.keys(queueState).forEach((k) => { if (!QUEUE_SLOTS.some(sl => sl.id === k)) delete queueState[k]; });
         let queueBusy = false;
         let activeSlotId = null; // the tile whose song is playing now (not saved across reloads)
 
