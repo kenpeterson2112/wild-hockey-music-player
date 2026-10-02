@@ -1,8 +1,11 @@
-"""Shared helpers for reading and writing the window.TRACKS block in index.html.
+"""Shared helpers for reading and writing the window.SONGS block in index.html.
 
-The track list lives in index.html as a JS object literal, not JSON, so it can
-stay readable and hand-editable. This module reads that block into a plain dict
-and renders a dict back out in the same style.
+The song list lives in index.html as a JS array literal, not JSON, so it can
+stay readable and hand-editable. This module reads that block into a plain list
+and renders a list back out in the same style.
+
+Each song is { uri, name, startSec?, tags? }. Tags are plain words such as
+"Goal For". A song with no tags is a between-whistles song.
 
 The Spotify-link and start-time parsers deliberately mirror parseSpotifyTrackId
 and parseStartTime in index.html, so anything the app accepts is accepted here.
@@ -15,19 +18,29 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = REPO_ROOT / "index.html"
 
-# Category key -> button label shown in the app, mirroring CATEGORIES in index.html.
-# The order here is the order the categories are written back out in.
-CATEGORY_LABELS = {
+# The tags the app and these scripts know by name, in the order they are shown.
+# Any other tag a song carries is kept and shown too.
+TAG_ORDER = ["Power Play", "Goal For", "Goal Against", "Penalty Kill", "End Game"]
+
+# Old spellings and category names -> the tag they mean. Keys are compact
+# (lowercase letters and digits only), so "Goal FOR", "goalFor" and "goal for"
+# all land on "Goal For".
+LEGACY_TAGS = {
+    "powerplay": "Power Play",
+    "penaltyfor": "Power Play",
+    "goalfor": "Goal For",
+    "goalagainst": "Goal Against",
+    "penaltykill": "Penalty Kill",
+    "penaltyagainst": "Penalty Kill",
+    "endgame": "End Game",
+    "endgameintensity": "End Game",
     "pregame": "Pregame",
-    "whistles": "Between Whistles",
-    "goalFor": "Goal FOR",
-    "goalAgainst": "Goal AGAINST",
-    "penaltyFor": "Powerplay",
-    "penaltyAgainst": "Penalty Kill",
-    "endGame": "End Game Intensity",
 }
 
-TRACKS_RE = re.compile(r"(window\.TRACKS\s*=\s*)(\{.*?\})(\s*;)", re.DOTALL)
+# Words that mean "no tag": the untagged default is a between-whistles song.
+NO_TAG_WORDS = {"whistles", "betweenwhistles", "whistle", "none", "untagged"}
+
+SONGS_RE = re.compile(r"(window\.SONGS\s*=\s*)(\[.*?\])(\s*;)", re.DOTALL)
 
 # A JS string, or a bare object key. Tokenizing this way keeps a colon inside a
 # string (spotify:track:...) from being mistaken for a key separator.
@@ -38,21 +51,41 @@ _JS_TOKEN_RE = re.compile(
 )
 
 
-def _normalize_label(text):
-    """Fold a category label to a comparable form: lowercase, alphanumerics only."""
+def _compact(text):
+    """Fold text to lowercase letters and digits only, for comparing names."""
     return re.sub(r"[^a-z0-9]", "", str(text).lower())
 
 
-# Accept either the button label ("Penalty Kill") or the internal key ("penaltyAgainst").
-LABEL_TO_KEY = {}
-for _key, _label in CATEGORY_LABELS.items():
-    LABEL_TO_KEY[_normalize_label(_label)] = _key
-    LABEL_TO_KEY[_normalize_label(_key)] = _key
+def clean_tag(text):
+    """A tag as typed -> its display name, or None when it means 'no tag'.
+
+    Old category names and spellings resolve to the current tag names; anything
+    else is kept as written (whitespace tidied).
+    """
+    tidy = re.sub(r"\s+", " ", str(text or "").strip())
+    if not tidy:
+        return None
+    compact = _compact(tidy)
+    if compact in NO_TAG_WORDS:
+        return None
+    return LEGACY_TAGS.get(compact, tidy)
 
 
-def category_key(text):
-    """Map a category label or key to its internal key, or None if unrecognized."""
-    return LABEL_TO_KEY.get(_normalize_label(text))
+def split_tags(text):
+    """'Goal For, Power Play' -> ['Goal For', 'Power Play'] (comma or semicolon)."""
+    tags = []
+    for part in re.split(r"[;,]", str(text or "")):
+        tag = clean_tag(part)
+        if tag and tag.lower() not in [t.lower() for t in tags]:
+            tags.append(tag)
+    return tags
+
+
+def sort_tags(tags):
+    """Known tags first in TAG_ORDER, then any others A-Z."""
+    known = [t for t in TAG_ORDER if t in tags]
+    others = sorted((t for t in tags if t not in TAG_ORDER), key=str.lower)
+    return known + others
 
 
 def parse_spotify_uri(text):
@@ -113,11 +146,11 @@ def spotify_url(uri):
     return uri
 
 
-def extract_tracks(html):
-    """Pull the window.TRACKS object literal out of index.html as a dict."""
-    match = TRACKS_RE.search(html)
+def extract_songs(html):
+    """Pull the window.SONGS array literal out of index.html as a list of dicts."""
+    match = SONGS_RE.search(html)
     if not match:
-        raise SystemExit("Could not find the window.TRACKS block in index.html")
+        raise SystemExit("Could not find the window.SONGS block in index.html")
 
     def normalize(m):
         text = m.group(0)
@@ -143,35 +176,62 @@ def _js_string(value):
     return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
-def render_tracks_block(tracks):
-    """Render a tracks dict as the JS object literal, in index.html's style."""
-    lines = ["{"]
-    keys = [k for k in CATEGORY_LABELS if k in tracks]
-    for i, key in enumerate(keys):
-        entries = tracks[key]
-        if not entries:
-            lines.append(f"            {key}: []" + ("," if i < len(keys) - 1 else ""))
-            continue
-        lines.append(f"            {key}: [")
-        for j, entry in enumerate(entries):
-            parts = [
-                f"uri: {_js_string(entry['uri'])}",
-                f"name: {_js_string(entry['name'])}",
-            ]
-            if entry.get("startSec"):
-                parts.append(f"startSec: {int(entry['startSec'])}")
-            if entry.get("tags"):
-                tag_list = ", ".join(_js_string(str(x)) for x in entry["tags"])
-                parts.append(f"tags: [{tag_list}]")
-            comma = "," if j < len(entries) - 1 else ""
-            lines.append("                { " + ", ".join(parts) + " }" + comma)
-        lines.append("            ]" + ("," if i < len(keys) - 1 else ""))
-    lines.append("        }")
+def render_songs_block(songs):
+    """Render a songs list as the JS array literal, in index.html's style."""
+    if not songs:
+        return "[]"
+    lines = ["["]
+    for i, entry in enumerate(songs):
+        parts = [
+            f"uri: {_js_string(entry['uri'])}",
+            f"name: {_js_string(entry['name'])}",
+        ]
+        if entry.get("startSec"):
+            parts.append(f"startSec: {int(entry['startSec'])}")
+        if entry.get("tags"):
+            tag_list = ", ".join(_js_string(str(t)) for t in entry["tags"])
+            parts.append(f"tags: [{tag_list}]")
+        comma = "," if i < len(songs) - 1 else ""
+        lines.append("            { " + ", ".join(parts) + " }" + comma)
+    lines.append("        ]")
     return "\n".join(lines)
 
 
-def replace_tracks_block(html, tracks):
-    """Return index.html with its window.TRACKS block replaced by `tracks`."""
-    block = render_tracks_block(tracks)
+def replace_songs_block(html, songs):
+    """Return index.html with its window.SONGS block replaced by `songs`."""
+    block = render_songs_block(songs)
     # A function replacement is used verbatim, so the block needs no escaping.
-    return TRACKS_RE.sub(lambda m: m.group(1) + block + m.group(3), html, count=1)
+    return SONGS_RE.sub(lambda m: m.group(1) + block + m.group(3), html, count=1)
+
+
+def songs_by_section(songs):
+    """Group songs into the game-situation sections the track list page shows.
+
+    Returns {section_key: [songs]} for every key in SECTION_LABELS. A song with
+    several tags appears in each of its sections; a song with none is a
+    between-whistles song. Used by the spreadsheet export and the track list page.
+    """
+    sections = {key: [] for key in SECTION_LABELS}
+    for song in songs:
+        keys = [TAG_TO_SECTION[t] for t in song.get("tags", []) if t in TAG_TO_SECTION]
+        for key in dict.fromkeys(keys) or ["whistles"]:
+            sections[key].append(song)
+    return sections
+
+
+# Section key -> heading, in the order the track list page shows them.
+SECTION_LABELS = {
+    "whistles": "Between Whistles",
+    "goalFor": "Goal For",
+    "goalAgainst": "Goal Against",
+    "penaltyFor": "Power Play",
+    "penaltyAgainst": "Penalty Kill",
+    "endGame": "End Game",
+}
+TAG_TO_SECTION = {
+    "Power Play": "penaltyFor",
+    "Goal For": "goalFor",
+    "Goal Against": "goalAgainst",
+    "Penalty Kill": "penaltyAgainst",
+    "End Game": "endGame",
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the public track list page from the window.TRACKS block in index.html.
+"""Generate the public track list page from the window.SONGS block in index.html.
 
 Writes tracklist/index.html, which GitHub Pages serves at
 <site>/tracklist -- a read-only list of every song currently in the app,
@@ -16,10 +16,11 @@ import html
 from pathlib import Path
 
 from tracks_io import (
-    CATEGORY_LABELS,
+    SECTION_LABELS,
     INDEX_HTML,
     REPO_ROOT,
-    extract_tracks,
+    extract_songs,
+    songs_by_section,
     format_start_time,
     spotify_url,
 )
@@ -173,7 +174,7 @@ PAGE = """<!DOCTYPE html>
 
 def render_section(key, entries):
     emoji, accent = CATEGORY_STYLE.get(key, ("🎵", "#1DB954"))
-    label = html.escape(CATEGORY_LABELS[key])
+    label = html.escape(SECTION_LABELS[key])
     lines = [
         f'  <section style="--accent: {accent}">',
         f"    <h2><span>{emoji}</span>{label} "
@@ -198,11 +199,12 @@ def render_section(key, entries):
 
 
 def main():
-    tracks = extract_tracks(INDEX_HTML.read_text(encoding="utf-8"))
+    songs = extract_songs(INDEX_HTML.read_text(encoding="utf-8"))
+    tracks = songs_by_section(songs)
     sections = "\n".join(
-        render_section(key, tracks.get(key, [])) for key in CATEGORY_LABELS
+        render_section(key, tracks.get(key, [])) for key in SECTION_LABELS
     )
-    total = sum(len(v) for v in tracks.values())
+    total = len(songs)
     form_button = (
         f'\n    <a class="btn" href="{html.escape(FORM_URL, quote=True)}" '
         'target="_blank" rel="noopener">Request a song</a>'

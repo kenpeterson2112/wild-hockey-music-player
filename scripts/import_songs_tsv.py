@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import Google Form song submissions into the window.TRACKS block in index.html.
+"""Import Google Form song submissions into the window.SONGS block in index.html.
 
 Paste the response sheet (headers included) into a file or pipe it in. Columns
 are matched by header name, so column order does not matter and the Timestamp
@@ -8,8 +8,10 @@ column Google adds is ignored.
 Expected headers (matched loosely -- case and punctuation are ignored):
     Song name          the track title
     Spotify link       share link, spotify:track: URI, or bare 22-char ID
-    When should it     the button label: Pregame, Between Whistles, Goal FOR,
-      play?            Goal AGAINST, Powerplay, Penalty Kill, End Game Intensity
+    When should it     optional; tags for the song, comma separated: Goal For,
+      play?            Goal Against, Power Play, Penalty Kill, End Game. Blank
+                       or "Between Whistles" means no tag (a between-whistles
+                       song). Old category names still work.
     Start time         optional; m:ss or plain seconds
 
 Usage:
@@ -25,14 +27,15 @@ import re
 import sys
 
 from tracks_io import (
-    CATEGORY_LABELS,
     INDEX_HTML,
-    category_key,
-    extract_tracks,
+    TAG_ORDER,
+    extract_songs,
     format_start_time,
     parse_spotify_uri,
     parse_start_time,
-    replace_tracks_block,
+    replace_songs_block,
+    sort_tags,
+    split_tags,
 )
 
 # Header aliases, checked in order. The first column whose normalized header
@@ -40,7 +43,7 @@ from tracks_io import (
 HEADER_ALIASES = {
     "name": ["songname", "songtitle", "song", "title", "track"],
     "link": ["spotify", "link", "url"],
-    "category": ["whenshoulditplay", "when", "category", "button", "playduring"],
+    "category": ["whenshoulditplay", "when", "tags", "tag", "category", "button", "playduring"],
     "start": ["starttime", "start", "timestampinsong"],
 }
 
@@ -94,7 +97,7 @@ def read_rows(text):
         raise SystemExit("No rows found in the input.")
 
     mapping = map_columns(rows[0])
-    missing = [f for f in ("name", "link", "category") if f not in mapping]
+    missing = [f for f in ("name", "link") if f not in mapping]
     if missing:
         raise SystemExit(
             "Could not find a column for: "
@@ -120,14 +123,10 @@ def read_rows(text):
                 (line_no, None, f"{name}: no usable Spotify link ({link!r})")
             )
             continue
-        key = category_key(category)
-        if not key:
-            results.append(
-                (line_no, None, f"{name}: unrecognized category ({category!r})")
-            )
-            continue
-
-        entry = {"uri": uri, "name": name, "key": key}
+        entry = {"uri": uri, "name": name}
+        tags = split_tags(category)
+        if tags:
+            entry["tags"] = tags
         start_sec = parse_start_time(start_raw)
         if start_sec > 0:
             entry["startSec"] = start_sec
@@ -135,22 +134,34 @@ def read_rows(text):
     return results
 
 
-def merge(tracks, parsed, allow_duplicates=False):
-    """Append parsed entries to the tracks dict. Returns (added, skipped)."""
+def merge(songs, parsed, allow_duplicates=False, allow_new_tags=False):
+    """Append parsed entries to the songs list. Returns (added, skipped).
+
+    A tag the library has never used is treated as a typo and the row is
+    skipped, unless allow_new_tags is set. A song already in the list (same
+    Spotify track) is skipped, unless allow_duplicates is set.
+    """
+    known = {t.lower() for t in TAG_ORDER}
+    for song in songs:
+        known.update(t.lower() for t in song.get("tags", []))
     added, skipped = [], []
     for line_no, entry, problem in parsed:
         if problem:
             skipped.append((line_no, problem))
             continue
-        key = entry.pop("key")
-        bucket = tracks.setdefault(key, [])
-        if not allow_duplicates and any(t["uri"] == entry["uri"] for t in bucket):
+        new_tags = [t for t in entry.get("tags", []) if t.lower() not in known]
+        if new_tags and not allow_new_tags:
             skipped.append(
-                (line_no, f"{entry['name']}: already in {CATEGORY_LABELS[key]}")
+                (line_no, f"{entry['name']}: unknown tag {', '.join(map(repr, new_tags))}"
+                 " (use --allow-new-tags to create it)")
             )
             continue
-        bucket.append(entry)
-        added.append((key, entry))
+        if not allow_duplicates and any(s["uri"] == entry["uri"] for s in songs):
+            skipped.append((line_no, f"{entry['name']}: already in the list"))
+            continue
+        songs.append(entry)
+        added.append(entry)
+        known.update(t.lower() for t in entry.get("tags", []))
     return added, skipped
 
 
@@ -167,7 +178,12 @@ def main():
     parser.add_argument(
         "--allow-duplicates",
         action="store_true",
-        help="add a song even if that track is already in the same category",
+        help="add a song even if that track is already in the list",
+    )
+    parser.add_argument(
+        "--allow-new-tags",
+        action="store_true",
+        help="create a tag the library has not used before instead of skipping the row",
     )
     args = parser.parse_args()
 
@@ -178,20 +194,16 @@ def main():
         text = sys.stdin.read()
 
     html = INDEX_HTML.read_text(encoding="utf-8")
-    tracks = extract_tracks(html)
-    before = sum(len(v) for v in tracks.values())
+    songs = extract_songs(html)
+    before = len(songs)
 
     parsed = read_rows(text)
-    added, skipped = merge(tracks, parsed, args.allow_duplicates)
+    added, skipped = merge(songs, parsed, args.allow_duplicates, args.allow_new_tags)
 
-    for key in CATEGORY_LABELS:
-        entries = [e for k, e in added if k == key]
-        if not entries:
-            continue
-        print(f"{CATEGORY_LABELS[key]}:")
-        for entry in entries:
-            start = format_start_time(entry.get("startSec"))
-            print(f"  + {entry['name']}" + (f"  (starts {start})" if start else ""))
+    for entry in added:
+        start = format_start_time(entry.get("startSec"))
+        tags = ", ".join(sort_tags(entry.get("tags", []))) or "no tags (between whistles)"
+        print(f"  + {entry['name']}  [{tags}]" + (f"  (starts {start})" if start else ""))
 
     if skipped:
         print("\nSkipped:")
@@ -202,19 +214,19 @@ def main():
         print("\nNothing to add.")
         return
 
-    after = sum(len(v) for v in tracks.values())
+    after = len(songs)
     print(f"\n{len(added)} added, {len(skipped)} skipped. {before} -> {after} songs.")
 
     if args.dry_run:
         print("Dry run — index.html not modified.")
         return
 
-    updated = replace_tracks_block(html, tracks)
+    updated = replace_songs_block(html, songs)
 
     # Re-parse what we are about to write, so a malformed block never lands in
-    # index.html: a broken TRACKS block would take the app down on load.
-    roundtrip = extract_tracks(updated)
-    if sum(len(v) for v in roundtrip.values()) != after:
+    # index.html: a broken SONGS block would take the app down on load.
+    roundtrip = extract_songs(updated)
+    if len(roundtrip) != after:
         raise SystemExit("Refusing to write: the rewritten block did not round-trip.")
 
     INDEX_HTML.write_text(updated, encoding="utf-8")
