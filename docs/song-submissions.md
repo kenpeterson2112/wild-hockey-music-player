@@ -9,7 +9,7 @@ get them into the app's built-in track list.
 |---|---|---|---|
 | 1 | Song name | Short answer | Yes |
 | 2 | Spotify link | Short answer | No* |
-| 3 | When should it play? | Dropdown | Yes |
+| 3 | When should it play? | Checkboxes | No |
 | 4 | Start time (optional) | Short answer | No |
 | 5 | Your name (optional) | Short answer | No |
 
@@ -17,24 +17,27 @@ get them into the app's built-in track list.
 submission — the importer skips any row without a usable link and tells you
 which ones it skipped, so a half-filled sheet is safe to run.
 
-**Question 3 must use these exact options.** They map onto the category keys in
-`index.html`, so exact spelling means nothing has to be guessed at import time:
+**Question 3 is a tick-all-that-apply list** (Checkboxes, not required). Use
+these exact options so nothing has to be guessed at import time:
 
 ```
-Pregame
-Between Whistles
-Goal FOR
-Goal AGAINST
-Powerplay
+Power Play
+Goal For
+Goal Against
 Penalty Kill
-End Game Intensity
+End Game
 ```
 
-Put the disambiguation in the question's description, since a dropdown can't
-hold per-option help text:
+A song with nothing ticked is a between-whistles song. The importer also reads
+comma-separated answers like `Goal For, Power Play`, and the old category names
+still work.
 
-> Goal FOR = we scored. Goal AGAINST = they scored. Powerplay = they're in the
-> box. Penalty Kill = we're in the box.
+Put the disambiguation in the question's description, since a list can't hold
+per-option help text:
+
+> Goal For = we scored. Goal Against = they scored. Power Play = they're in the
+> box. Penalty Kill = we're in the box. Leave blank for a song that fits any
+> stoppage.
 
 **Question 2 validation** — Response validation → Regular expression →
 *Contains*:
@@ -66,25 +69,25 @@ python scripts/import_songs_tsv.py responses.tsv             # apply
 Keep the header row in whatever you feed it — columns are matched by header
 name, so column order doesn't matter and Google's `Timestamp` column is ignored.
 
-The importer appends to `window.TRACKS` in `index.html` and prints what it did:
+The importer appends to `window.SONGS` in `index.html` and prints what it did:
 
 ```
-Goal FOR:
+Goal For:
   + Renegade  (starts 0:48)
 
 Skipped:
-  row 6: Thunderstruck: already in Goal FOR
+  row 6: Thunderstruck: already in the list
   row 7: Some Song: no usable Spotify link ('https://youtube.com/watch?v=abc')
-  row 8: Mystery Track: unrecognized category ('Intermission')
+  row 8: Mystery Track: no usable Spotify link ('')
 
 1 added, 3 skipped. 27 -> 28 songs.
 ```
 
 Rows are skipped, never guessed at, when the song name is blank, the Spotify
-link is missing or unusable, the category doesn't match one of the seven, or
-that track is already in that category. Fix those rows and re-run — songs
+link is missing or unusable, or
+that track is already in the list. Fix those rows and re-run — songs
 already imported are detected as duplicates, so re-running the same sheet is
-safe. Pass `--allow-duplicates` to add a track that is already in the category
+safe. Pass `--allow-duplicates` to add a track that is already in the list
 anyway.
 
 Links may be a share link (with or without a `?si=` suffix), a
@@ -105,9 +108,9 @@ python scripts/build_tracklist.py
 ```
 
 This writes `tracklist/index.html`, which GitHub Pages serves at
-`<site>/tracklist` — every song grouped by button, with a search box so people
+`<site>/tracklist` — every song grouped by tag, with a search box so people
 can check whether something is already in before requesting it. It is generated
-from `window.TRACKS`, so it can't drift out of sync with the app as long as you
+from `window.SONGS`, so it can't drift out of sync with the app as long as you
 re-run it (the importer prints a reminder).
 
 To show a "Request a song" button linking to the form, set `FORM_URL` at the top
@@ -123,7 +126,7 @@ python scripts/export_songs_xlsx.py
 ```
 
 Writes `wild-hockey-songs.xlsx` — one row per song with name, Spotify link,
-category, and start time.
+tags, and start time.
 
 Both scripts need `openpyxl` (`pip install openpyxl`); the importer alone needs
 only the standard library.

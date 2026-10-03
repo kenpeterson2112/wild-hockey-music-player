@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Export the song list from index.html into a simple spreadsheet.
 
-Reads the window.TRACKS block in index.html (the "EDIT YOUR TRACKS HERE"
-section) and writes one row per track with the song name, its Spotify link,
-the button/category it belongs to, and the start time.
+Reads the window.SONGS block in index.html (the "EDIT YOUR SONGS HERE"
+section) and writes one row per song with the song name, its Spotify link,
+its tags (blank for a between-whistles song), and the start time.
 
 Usage:
     python scripts/export_songs_xlsx.py [output.xlsx]
@@ -17,32 +17,30 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from tracks_io import (
-    CATEGORY_LABELS,
     INDEX_HTML,
     REPO_ROOT,
-    extract_tracks,
+    extract_songs,
     format_start_time,
+    sort_tags,
     spotify_url,
 )
 
 DEFAULT_OUTPUT = REPO_ROOT / "wild-hockey-songs.xlsx"
 
-HEADERS = ["Song Name", "Spotify Link", "Category", "Start Time"]
+HEADERS = ["Song Name", "Spotify Link", "Tags", "Start Time"]
 
 
-def build_rows(tracks: dict) -> list:
+def build_rows(songs: list) -> list:
     rows = []
-    for key, entries in tracks.items():
-        label = CATEGORY_LABELS.get(key, key)
-        for entry in entries:
-            rows.append(
-                [
-                    entry.get("name", ""),
-                    spotify_url(entry.get("uri", "")),
-                    label,
-                    format_start_time(entry.get("startSec")),
-                ]
-            )
+    for entry in songs:
+        rows.append(
+            [
+                entry.get("name", ""),
+                spotify_url(entry.get("uri", "")),
+                ", ".join(sort_tags(entry.get("tags", []))),
+                format_start_time(entry.get("startSec")),
+            ]
+        )
     return rows
 
 
@@ -77,7 +75,8 @@ def write_workbook(rows: list, output: Path) -> None:
         row=note_row,
         column=1,
         value=(
-            "Exported from the window.TRACKS block in index.html. Start Time is shown as "
+            "Exported from the window.SONGS block in index.html. Tags are blank for a "
+            "between-whistles song. Start Time is shown as "
             "m:ss and corresponds to the startSec value (in seconds); a blank means the "
             "track plays from the beginning."
         ),
@@ -96,8 +95,8 @@ def write_workbook(rows: list, output: Path) -> None:
 
 def main() -> None:
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUTPUT
-    tracks = extract_tracks(INDEX_HTML.read_text(encoding="utf-8"))
-    rows = build_rows(tracks)
+    songs = extract_songs(INDEX_HTML.read_text(encoding="utf-8"))
+    rows = build_rows(songs)
     write_workbook(rows, output)
     print(f"Wrote {len(rows)} songs to {output}")
 

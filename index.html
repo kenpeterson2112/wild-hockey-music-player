@@ -288,9 +288,14 @@
             width: 32px;
             height: 32px;
         }
+        /* Song picker: fixed size so a short (filtered) list doesn't shrink the window */
+        .track-modal-content { height: min(80vh, 640px); max-height: none; }
+        .track-modal-content .modal-header { flex-shrink: 0; }
         .track-list {
             overflow-y: auto;
             padding: 12px;
+            flex: 1 1 auto;
+            min-height: 0;
         }
         .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; }
         .tag-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
@@ -300,7 +305,23 @@
             box-shadow: none;
         }
         .chip .chip-n { opacity: 0.6; font-weight: 500; margin-left: 4px; }
+        .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; align-self: flex-start; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
+        /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
+           Power Play blue, Penalty Kill amber, End Game orange). Other tags stay neutral. */
+        .tc-green  { --tc: #1DB954; }
+        .tc-red    { --tc: #e0455e; }
+        .tc-blue   { --tc: #3b82f6; }
+        .tc-amber  { --tc: #f59e0b; }
+        .tc-orange { --tc: #fb7139; }
+        .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
+        .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
+        .tag-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+        .tag-pill {
+            font-size: 0.7rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px;
+            color: var(--tc, #8a8f9c); border: 1px solid var(--tc, #8a8f9c);
+            background: #20232c; background: color-mix(in srgb, var(--tc, #8a8f9c) 16%, #20232c);
+        }
         .list-divider {
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
@@ -375,6 +396,9 @@
         .settings-section select,
         .settings-section .settings-btn-action { margin-top: 8px; }
         .status-line { margin-top: 10px; font-size: 0.85rem; color: #8a8f9c; }
+        .tag-picker-label { margin-top: 12px; font-size: 0.8rem; color: #8a8f9c; }
+        .tag-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+        .tag-picker .chip { padding: 9px 14px; font-size: 0.9rem; }
         .track-remove {
             flex-shrink: 0;
             background: #3a2c31;
@@ -454,7 +478,7 @@
     </div>
 
     <div id="track-modal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content track-modal-content">
             <div class="modal-header">
                 <span class="modal-title" id="track-modal-title">Select Track</span>
                 <button class="modal-close" onclick="closeTrackSelector()">✕</button>
@@ -475,11 +499,13 @@
             <div class="settings-body">
                 <div class="settings-section">
                     <h3>Add Custom Song</h3>
-                    <p>Paste a Spotify song link, name it, and pick a button. It's saved on this device and shows up in that button's list next to the built-in songs.</p>
+                    <p>Paste a Spotify song link and name it. It's saved on this device and shows up in the song list. Leave the tags empty for a between-whistles song.</p>
                     <input type="text" id="custom-link-input" placeholder="Paste Spotify song link">
                     <input type="text" id="custom-name-input" placeholder="Song name">
-                    <select id="custom-category-select"></select>
                     <input type="text" id="custom-start-input" placeholder="Start time m:ss (optional)">
+                    <div class="tag-picker-label">Tags (tap any that apply)</div>
+                    <div id="custom-tag-chips" class="tag-picker"></div>
+                    <input type="text" id="custom-newtag-input" placeholder="New tag (optional)">
                     <button class="settings-btn-action" onclick="addCustomTrack()">Add song</button>
                     <div id="custom-add-status" class="status-line"></div>
                 </div>
@@ -536,100 +562,89 @@
     </div>
 
     <!-- ============================================================
-         EDIT YOUR TRACKS HERE.
-         Each category is a list of tracks. Each track is:
+         EDIT YOUR SONGS HERE.
+         One list. Each song is:
              { uri: 'spotify:track:XXXXX', name: 'Song Title' }
-         Optionally add a start time (in seconds) so playback skips
-         an intro:
-             { uri: 'spotify:track:XXXXX', name: 'Song Title', startSec: 15 }
-         Wrap every track in { }, put a COMMA after each track and
-         after each field except the last one in it. This block is
-         isolated on purpose: a typo here can't break the rest of the app.
+         Optional start time in seconds, so playback skips an intro:
+             startSec: 15
+         Optional tags (a song can have several):
+             tags: ['Goal For', 'Power Play']
+         A song with no tags is a between-whistles song.
+         Wrap every song in { }, put a COMMA after each song and after
+         each field except the last one in it. This block is isolated on
+         purpose: a typo here can't break the rest of the app.
          ============================================================ -->
     <script>
-        window.TRACKS = {
-            pregame: [],
-            whistles: [
-                { uri: 'spotify:track:0pqnGHJpmpxLKifKRmU6WP', name: 'Believer' },
-                { uri: 'spotify:track:2yLa0QULdQr0qAIvVwN6B5', name: 'Ready for It?', startSec: 8 },
-                { uri: 'spotify:track:6RSuGXM9GVMdXaI8ifGm8d', name: "Let's Go" },
-                { uri: 'spotify:track:04aAxqtGp5pv12UXAg4pkq', name: 'Centuries', startSec: 25 },
-                { uri: 'spotify:track:67awxiNHNyjMXhVgsHuIrs', name: 'Turn Down for What', startSec: 16 },
-                { uri: 'spotify:track:34x6hEJgGAOQvmlMql5Ige', name: 'Danger Zone', startSec: 53 },
-                { uri: 'spotify:track:5nKdxWYQJTzJrHXWOSO9tO', name: 'Tick Tick Boom', startSec: 12 },
-                { uri: 'spotify:track:2g8q4vNuoVpLJGK17kVcoR', name: 'The Hockey Song' },
-                { uri: 'spotify:track:1yvMUkIOTeUNtNWlWRgANS', name: 'Unstoppable', startSec: 185 },
-                { uri: 'spotify:track:1vLqigPHwiFnXsfrLMehV1', name: 'Espresso', startSec: 8 },
-                { uri: 'spotify:track:0EAARxHiL76Us70njzbItJ', name: "Let's Get It Started", startSec: 50 },
-                { uri: 'spotify:track:6SRsiMl7w1USE4mFqrOhHC', name: 'brutal', startSec: 60 },
-                { uri: 'spotify:track:2A1aS3mwuGuX2yk1bgxOvA', name: 'Kisses 1', startSec: 35 },
-                { uri: 'spotify:track:02bJ6uGeHKfNOhIc9qyA8e', name: 'Wild child', startSec: 122 },
-                { uri: 'spotify:track:4Nh7Umpl8YPFPcggcby6JW', name: 'Runaway', startSec: 45 },
-                { uri: 'spotify:track:0txisWocI2H8yPRjYxLo83', name: 'Chelsea dagger', startSec: 186 },
-                { uri: 'spotify:track:0C80GCp0mMuBzLf3EAXqxv', name: 'Shoot to Thrill', startSec: 62 },
-                { uri: 'spotify:track:4w3tQBXhn5345eUXDGBWZG', name: '9 to 5', startSec: 88 },
-                { uri: 'spotify:track:0e6WPtkB9dwFiwspkEeen2', name: 'Lush Life', startSec: 49 },
-                { uri: 'spotify:track:1k2pQc5i348DCHwbn5KTdc', name: 'pink pony club', startSec: 135 },
-                { uri: 'spotify:track:1szwDbVdIdoQq5mG5GXAmJ', name: 'the distance', startSec: 42 },
-                { uri: 'spotify:track:01lZlV0coZWuhzZpFQZ43u', name: 'wild thing' },
-                { uri: 'spotify:track:03ZyPqIZXdBNNVIpM2KORq', name: 'brass', startSec: 30 },
-                { uri: 'spotify:track:5zyxpZ8xZmTuhXOuZq4KBG', name: 'get ready for this', startSec: 25 },
-                { uri: 'spotify:track:0y3fi7fknIXOxnkbUgzT3n', name: 'handclap', startSec: 27 },
-                { uri: 'spotify:track:1t3mzpCfaMsEqL1Fbq46ST', name: 'rock n roll gary glitter', startSec: 44 },
-                { uri: 'spotify:track:3SWqGa1J0M7hSBUDM0KePD', name: 'legend', startSec: 16 },
-                { uri: 'spotify:track:4o6BgsqLIBViaGVbx5rbRk', name: 'You Make My Dreams (Come True)' },
-                { uri: 'spotify:track:3f2fyR55BFMl3ZWS5S3BUZ', name: 'Kernkraft 400', startSec: 116 },
-                { uri: 'spotify:track:1FTSo4v6BOZH9QxKc3MbVM', name: 'Song 2', startSec: 14 },
-                { uri: 'spotify:track:6JymsaWDHk2Yj4e0yNBIFH', name: 'Jump Around' },
-                { uri: 'spotify:track:5AEs83CYoPApEjYEJGbTuJ', name: 'Party Till We Die' },
-                { uri: 'spotify:track:4r8lRYnoOGdEi6YyI5OC1o', name: 'Bye Bye Bye', startSec: 54 },
-                { uri: 'spotify:track:7ACxUo21jtTHzy7ZEV56vU', name: 'Crazy Train' },
-                { uri: 'spotify:track:2HHtWyy5CgaQbC7XSoOb0e', name: 'Eye of the Tiger' },
-                { uri: 'spotify:track:2tUBqZG2AbRi7Q0BIrVrEj', name: 'I Wanna Dance with Somebody', startSec: 60 },
-                { uri: 'spotify:track:6nFYXpBgrNcZjbtNEuc6yR', name: 'I Am Your Gummy Bear', startSec: 37 },
-                { uri: 'spotify:track:4TuNI3WEMyLQAKRMJmcQdA', name: 'Narco' },
-                { uri: 'spotify:track:1zB4vmk8tFRmM9UULNzbLB', name: 'Thunder', startSec: 73 },
-                { uri: 'spotify:track:4pkb8SbRGeHAvdb87v9rpf', name: 'Miles On It', startSec: 132 },
-                { uri: 'spotify:track:05RgAMGypEvqhNs5hPCbMS', name: 'Panama' },
-                { uri: 'spotify:track:0VoH8AGgoJ20DmTeEEOBAU', name: 'Papi' },
-                { uri: 'spotify:track:3K7Q9PHUWPTaknlbFPThn2', name: 'Celebration' },
-                { uri: 'spotify:track:7wMq5n8mYSKlQIGECKUgTX', name: 'Hall of Fame' },
-                { uri: 'spotify:track:3dPQuX8Gs42Y7b454ybpMR', name: 'Seven Nation Army' },
-                { uri: 'spotify:track:44DCjBHfvn5s6ZfLHpKmBi', name: 'Freaks' },
-                { uri: 'spotify:track:5YPMEOJ58kfl56VHxTgwx3', name: 'Play Hard' },
-                { uri: 'spotify:track:5KqldkCunQ2rWxruMEtGh0', name: 'The Gambler' },
-                { uri: 'spotify:track:2VPGmrcBw5X4yAu3B8UZNE', name: 'Born to be Wild', startSec: 68 },
-                { uri: 'spotify:track:7zVpUAOuXY7pHHSm21jFEq', name: 'Wild side', startSec: 166 },
-                { uri: 'spotify:track:1NpW5kyvO4XrNJ3rnfcNy3', name: 'Wild one', startSec: 122 },
-                { uri: 'spotify:track:5Hroj5K7vLpIG4FNCRIjbP', name: 'Best day of my life', startSec: 152 },
-                { uri: 'spotify:track:0bRNszTbTFLNlunAeh7eom', name: 'Sharp dressed man' },
-                { uri: 'spotify:track:4xdBrk0nFZaP54vvZj0yx7', name: 'Hot to Go', startSec: 113 },
-                { uri: 'spotify:track:4NdJlsPyvXz15LySCNoL2W', name: 'Giddy up', startSec: 32 },
-                { uri: 'spotify:track:6sxptembJVty4sNtcPMAVz', name: 'Man i feel like a woman' },
-                { uri: 'spotify:track:73ljrkSg4A0q3ByU0Cu7mw', name: 'Venga Bus', startSec: 69 },
-                { uri: 'spotify:track:22skzmqfdWrjJylampe0kt', name: "Ceiling can't hold us", startSec: 229 }
-            ],
-            goalFor: [
-                { uri: 'spotify:track:57bgtoPSgt236HzfBOd8kj', name: 'Thunderstruck', startSec: 158 },
-                { uri: 'spotify:track:1ZipIhmm5baGBobKoAFWHE', name: 'Kickstart my Heart', startSec: 63 }
-            ],
-            goalAgainst: [
-                { uri: 'spotify:track:3pv7Q5v2dpdefwdWIvE7yH', name: 'Shake it Off', startSec: 41 },
-                { uri: 'spotify:track:5X79VgaOn8pDTpTKu3PixN', name: "We're not gonna take it", startSec: 46 }
-            ],
-            penaltyFor: [
-                { uri: 'spotify:track:4Y7XAxTANhu3lmnLAzhWJW', name: 'Fireball', startSec: 92 }
-            ],
-            penaltyAgainst: [
-                { uri: 'spotify:track:4svZDCRz4cJoneBpjpx8DJ', name: 'I Did Something Bad', startSec: 44 },
-                { uri: 'spotify:track:1ibRqifchaAfeNdQGpbRVW', name: 'Bad Girls', startSec: 93 }
-            ],
-            endGame: [
-                { uri: 'spotify:track:3MrRksHupTVEQ7YbA0FsZK', name: 'Final Countdown', startSec: 248 },
-                { uri: 'spotify:track:7ouMYWpwJ422jRcDASZB7P', name: 'Knights of Cydonia', startSec: 250 },
-                { uri: 'spotify:track:78lgmZwycJ3nzsdgmPPGNx', name: 'Immigrant Song', startSec: 1 }
-            ]
-        };
+        window.SONGS = [
+            { uri: 'spotify:track:0pqnGHJpmpxLKifKRmU6WP', name: 'Believer' },
+            { uri: 'spotify:track:2yLa0QULdQr0qAIvVwN6B5', name: 'Ready for It?', startSec: 8 },
+            { uri: 'spotify:track:6RSuGXM9GVMdXaI8ifGm8d', name: "Let's Go" },
+            { uri: 'spotify:track:04aAxqtGp5pv12UXAg4pkq', name: 'Centuries', startSec: 25 },
+            { uri: 'spotify:track:67awxiNHNyjMXhVgsHuIrs', name: 'Turn Down for What', startSec: 16 },
+            { uri: 'spotify:track:34x6hEJgGAOQvmlMql5Ige', name: 'Danger Zone', startSec: 53 },
+            { uri: 'spotify:track:5nKdxWYQJTzJrHXWOSO9tO', name: 'Tick Tick Boom', startSec: 12 },
+            { uri: 'spotify:track:2g8q4vNuoVpLJGK17kVcoR', name: 'The Hockey Song' },
+            { uri: 'spotify:track:1yvMUkIOTeUNtNWlWRgANS', name: 'Unstoppable', startSec: 185 },
+            { uri: 'spotify:track:1vLqigPHwiFnXsfrLMehV1', name: 'Espresso', startSec: 8 },
+            { uri: 'spotify:track:0EAARxHiL76Us70njzbItJ', name: "Let's Get It Started", startSec: 50 },
+            { uri: 'spotify:track:6SRsiMl7w1USE4mFqrOhHC', name: 'brutal', startSec: 60 },
+            { uri: 'spotify:track:2A1aS3mwuGuX2yk1bgxOvA', name: 'Kisses 1', startSec: 35 },
+            { uri: 'spotify:track:02bJ6uGeHKfNOhIc9qyA8e', name: 'Wild child', startSec: 122 },
+            { uri: 'spotify:track:4Nh7Umpl8YPFPcggcby6JW', name: 'Runaway', startSec: 45 },
+            { uri: 'spotify:track:0txisWocI2H8yPRjYxLo83', name: 'Chelsea dagger', startSec: 186 },
+            { uri: 'spotify:track:0C80GCp0mMuBzLf3EAXqxv', name: 'Shoot to Thrill', startSec: 62 },
+            { uri: 'spotify:track:4w3tQBXhn5345eUXDGBWZG', name: '9 to 5', startSec: 88 },
+            { uri: 'spotify:track:0e6WPtkB9dwFiwspkEeen2', name: 'Lush Life', startSec: 49 },
+            { uri: 'spotify:track:1k2pQc5i348DCHwbn5KTdc', name: 'pink pony club', startSec: 135 },
+            { uri: 'spotify:track:1szwDbVdIdoQq5mG5GXAmJ', name: 'the distance', startSec: 42 },
+            { uri: 'spotify:track:01lZlV0coZWuhzZpFQZ43u', name: 'wild thing' },
+            { uri: 'spotify:track:03ZyPqIZXdBNNVIpM2KORq', name: 'brass', startSec: 30 },
+            { uri: 'spotify:track:5zyxpZ8xZmTuhXOuZq4KBG', name: 'get ready for this', startSec: 25 },
+            { uri: 'spotify:track:0y3fi7fknIXOxnkbUgzT3n', name: 'handclap', startSec: 27 },
+            { uri: 'spotify:track:1t3mzpCfaMsEqL1Fbq46ST', name: 'rock n roll gary glitter', startSec: 44 },
+            { uri: 'spotify:track:3SWqGa1J0M7hSBUDM0KePD', name: 'legend', startSec: 16 },
+            { uri: 'spotify:track:4o6BgsqLIBViaGVbx5rbRk', name: 'You Make My Dreams (Come True)' },
+            { uri: 'spotify:track:3f2fyR55BFMl3ZWS5S3BUZ', name: 'Kernkraft 400', startSec: 116 },
+            { uri: 'spotify:track:1FTSo4v6BOZH9QxKc3MbVM', name: 'Song 2', startSec: 14 },
+            { uri: 'spotify:track:6JymsaWDHk2Yj4e0yNBIFH', name: 'Jump Around' },
+            { uri: 'spotify:track:5AEs83CYoPApEjYEJGbTuJ', name: 'Party Till We Die' },
+            { uri: 'spotify:track:4r8lRYnoOGdEi6YyI5OC1o', name: 'Bye Bye Bye', startSec: 54 },
+            { uri: 'spotify:track:7ACxUo21jtTHzy7ZEV56vU', name: 'Crazy Train' },
+            { uri: 'spotify:track:2HHtWyy5CgaQbC7XSoOb0e', name: 'Eye of the Tiger' },
+            { uri: 'spotify:track:2tUBqZG2AbRi7Q0BIrVrEj', name: 'I Wanna Dance with Somebody', startSec: 60 },
+            { uri: 'spotify:track:6nFYXpBgrNcZjbtNEuc6yR', name: 'I Am Your Gummy Bear', startSec: 37 },
+            { uri: 'spotify:track:4TuNI3WEMyLQAKRMJmcQdA', name: 'Narco' },
+            { uri: 'spotify:track:1zB4vmk8tFRmM9UULNzbLB', name: 'Thunder', startSec: 73 },
+            { uri: 'spotify:track:4pkb8SbRGeHAvdb87v9rpf', name: 'Miles On It', startSec: 132 },
+            { uri: 'spotify:track:05RgAMGypEvqhNs5hPCbMS', name: 'Panama' },
+            { uri: 'spotify:track:0VoH8AGgoJ20DmTeEEOBAU', name: 'Papi' },
+            { uri: 'spotify:track:3K7Q9PHUWPTaknlbFPThn2', name: 'Celebration' },
+            { uri: 'spotify:track:7wMq5n8mYSKlQIGECKUgTX', name: 'Hall of Fame' },
+            { uri: 'spotify:track:3dPQuX8Gs42Y7b454ybpMR', name: 'Seven Nation Army', tags: ['Power Play'] },
+            { uri: 'spotify:track:44DCjBHfvn5s6ZfLHpKmBi', name: 'Freaks' },
+            { uri: 'spotify:track:5YPMEOJ58kfl56VHxTgwx3', name: 'Play Hard' },
+            { uri: 'spotify:track:5KqldkCunQ2rWxruMEtGh0', name: 'The Gambler' },
+            { uri: 'spotify:track:2VPGmrcBw5X4yAu3B8UZNE', name: 'Born to be Wild', startSec: 68 },
+            { uri: 'spotify:track:7zVpUAOuXY7pHHSm21jFEq', name: 'Wild side', startSec: 166 },
+            { uri: 'spotify:track:1NpW5kyvO4XrNJ3rnfcNy3', name: 'Wild one', startSec: 122 },
+            { uri: 'spotify:track:5Hroj5K7vLpIG4FNCRIjbP', name: 'Best day of my life', startSec: 152 },
+            { uri: 'spotify:track:0bRNszTbTFLNlunAeh7eom', name: 'Sharp dressed man' },
+            { uri: 'spotify:track:4xdBrk0nFZaP54vvZj0yx7', name: 'Hot to Go', startSec: 113 },
+            { uri: 'spotify:track:4NdJlsPyvXz15LySCNoL2W', name: 'Giddy up', startSec: 32 },
+            { uri: 'spotify:track:6sxptembJVty4sNtcPMAVz', name: 'Man i feel like a woman' },
+            { uri: 'spotify:track:73ljrkSg4A0q3ByU0Cu7mw', name: 'Venga Bus', startSec: 69 },
+            { uri: 'spotify:track:22skzmqfdWrjJylampe0kt', name: "Ceiling can't hold us", startSec: 229 },
+            { uri: 'spotify:track:57bgtoPSgt236HzfBOd8kj', name: 'Thunderstruck', startSec: 158, tags: ['Power Play', 'Goal For'] },
+            { uri: 'spotify:track:1ZipIhmm5baGBobKoAFWHE', name: 'Kickstart my Heart', startSec: 63, tags: ['Goal For'] },
+            { uri: 'spotify:track:3pv7Q5v2dpdefwdWIvE7yH', name: 'Shake it Off', startSec: 41, tags: ['Goal Against'] },
+            { uri: 'spotify:track:5X79VgaOn8pDTpTKu3PixN', name: "We're not gonna take it", startSec: 46, tags: ['Goal Against'] },
+            { uri: 'spotify:track:4Y7XAxTANhu3lmnLAzhWJW', name: 'Fireball', startSec: 92, tags: ['Power Play'] },
+            { uri: 'spotify:track:4svZDCRz4cJoneBpjpx8DJ', name: 'I Did Something Bad', startSec: 44, tags: ['Penalty Kill'] },
+            { uri: 'spotify:track:1ibRqifchaAfeNdQGpbRVW', name: 'Bad Girls', startSec: 93, tags: ['Penalty Kill'] },
+            { uri: 'spotify:track:3MrRksHupTVEQ7YbA0FsZK', name: 'Final Countdown', startSec: 248, tags: ['End Game'] },
+            { uri: 'spotify:track:7ouMYWpwJ422jRcDASZB7P', name: 'Knights of Cydonia', startSec: 250, tags: ['End Game'] },
+            { uri: 'spotify:track:78lgmZwycJ3nzsdgmPPGNx', name: 'Immigrant Song', startSec: 1, tags: ['End Game'] }
+        ];
     </script>
 
     <script>
@@ -668,10 +683,9 @@
 
         let accessToken = lsGet('spotify_access_token');
 
-        // Track lists live in their own <script> block above. If that block
-        // has a typo (e.g. a missing comma), only the track lists are lost —
-        // the app itself keeps working and shows a warning when you open one.
-        const tracks = window.TRACKS || {};
+        // The song list lives in its own <script> block above (window.SONGS). If that
+        // block has a typo (e.g. a missing comma), only the songs are lost: the app
+        // itself keeps working and shows a warning when you open the list.
 
         // --- PKCE AUTHENTICATION LOGIC ---
         function generateRandomString(length) {
@@ -983,25 +997,112 @@
             if (el) { el.textContent = '✓ Play counts reset to zero'; el.style.color = '#1DB954'; }
         }
 
-        // --- CUSTOM ON-DEVICE TRACKS (added via pasted Spotify link) ---
-        // Same shape as window.TRACKS: { <categoryKey>: [ {uri, name, startSec?} ] }
-        // Stored only in this browser; never touches the repo track list.
-        let customTracks = {};
-        try { customTracks = JSON.parse(lsGet('custom_tracks') || '{}') || {}; } catch (e) { customTracks = {}; }
+        // --- TAGS ---
+        // A song's tags are plain words such as "Goal For". A song with no tags is a
+        // between-whistles song. Old category names ("goalFor", "Powerplay", ...) and
+        // spellings resolve to the current tag names, so old saved data and old
+        // export files keep working.
+        const LEGACY_TAGS = {
+            powerplay: 'Power Play', penaltyfor: 'Power Play',
+            goalfor: 'Goal For', goalagainst: 'Goal Against',
+            penaltykill: 'Penalty Kill', penaltyagainst: 'Penalty Kill',
+            endgame: 'End Game', endgameintensity: 'End Game',
+            pregame: 'Pregame'
+        };
+        const NO_TAG_WORDS = ['whistles', 'betweenwhistles', 'whistle', 'none', 'untagged'];
+        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game'];
 
-        // Button categories: key (internal) -> label (shown to the user)
-        const CATEGORIES = [
-            ['pregame', 'Pregame'],
-            ['whistles', 'Between Whistles'],
-            ['goalFor', 'Goal FOR'],
-            ['goalAgainst', 'Goal AGAINST'],
-            ['penaltyFor', 'Powerplay'],
-            ['penaltyAgainst', 'Penalty Kill'],
-            ['endGame', 'End Game Intensity']
-        ];
+        function compactTag(raw) { return String(raw == null ? '' : raw).toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
-        function saveCustomTracks() {
-            lsSet('custom_tracks', JSON.stringify(customTracks));
+        // A tag as typed -> its display name, or null when it means "no tag".
+        function cleanTag(raw) {
+            const t = String(raw == null ? '' : raw).trim().replace(/\s+/g, ' ');
+            if (!t) return null;
+            const compact = compactTag(t);
+            if (NO_TAG_WORDS.includes(compact)) return null;
+            return LEGACY_TAGS[compact] || t;
+        }
+        function tagId(display) { return String(display).toLowerCase(); }
+        // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange' };
+        function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
+
+        // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)
+        function splitTags(text) {
+            const out = [], seen = new Set();
+            String(text || '').split(/[;,]/).forEach((part) => {
+                const t = cleanTag(part);
+                if (t && !seen.has(tagId(t))) { seen.add(tagId(t)); out.push(t); }
+            });
+            return out;
+        }
+
+        // --- CUSTOM ON-DEVICE SONGS (added via pasted Spotify link) ---
+        // A flat list like window.SONGS: [ {uri, name, startSec?, tags?} ]. Stored only
+        // in this browser; never touches the repo song list.
+        function cleanSong(entry) { // -> a well-formed song, or null
+            if (!entry || typeof entry !== 'object') return null;
+            const uri = parseSpotifyTrackId(entry.uri);
+            const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+            if (!uri || !name) return null;
+            const out = { uri: uri, name: name };
+            if (typeof entry.startSec === 'number' && entry.startSec > 0) out.startSec = Math.round(entry.startSec);
+            const tags = splitTags(Array.isArray(entry.tags) ? entry.tags.join(';') : '');
+            if (tags.length) out.tags = tags;
+            return out;
+        }
+
+        // One entry per Spotify track; a repeat adds its tags to the existing entry.
+        function addSongTo(list, song) {
+            const existing = list.find(x => x.uri === song.uri);
+            if (!existing) { list.push(song); return true; }
+            const have = new Set((existing.tags || []).map(tagId));
+            (song.tags || []).forEach((t) => {
+                if (!have.has(tagId(t))) { (existing.tags = existing.tags || []).push(t); have.add(tagId(t)); }
+            });
+            return false;
+        }
+
+        // The old on-device format was { <categoryKey>: [song] }. Turn it into the flat
+        // list, with each old category becoming a tag (Between Whistles becomes no tag).
+        // Keys that are not an old category are ignored.
+        function songsFromCategories(dict) {
+            const out = [];
+            if (!dict || typeof dict !== 'object') return out;
+            Object.keys(dict).forEach((key) => {
+                const compact = compactTag(key);
+                if (!Array.isArray(dict[key]) || !(compact in LEGACY_TAGS || NO_TAG_WORDS.includes(compact))) return;
+                const tag = cleanTag(key);
+                dict[key].forEach((entry) => {
+                    const song = cleanSong(entry);
+                    if (!song) return;
+                    if (tag) song.tags = (song.tags || []).filter(t => tagId(t) !== tagId(tag)).concat(tag);
+                    addSongTo(out, song);
+                });
+            });
+            return out;
+        }
+
+        let customSongs = [];
+        (function loadCustomSongs() {
+            const raw = lsGet('custom_songs');
+            if (raw != null) {
+                try {
+                    const list = JSON.parse(raw);
+                    if (Array.isArray(list)) customSongs = list.map(cleanSong).filter(Boolean);
+                } catch (e) { customSongs = []; }
+                return;
+            }
+            // First run on the flat format: convert the old per-category store once.
+            // The old 'custom_tracks' entry is left in place, untouched.
+            let old = {};
+            try { old = JSON.parse(lsGet('custom_tracks') || '{}') || {}; } catch (e) { old = {}; }
+            customSongs = songsFromCategories(old);
+            lsSet('custom_songs', JSON.stringify(customSongs));
+        })();
+
+        function saveCustomSongs() {
+            lsSet('custom_songs', JSON.stringify(customSongs));
         }
 
         // Accept a share link, a spotify:track: URI, or a bare 22-char ID.
@@ -1034,20 +1135,36 @@
             return total < 0 ? 0 : total;
         }
 
-        function populateCategorySelect() {
-            const sel = document.getElementById('custom-category-select');
-            if (!sel || sel.options.length) return;
-            CATEGORIES.forEach(([key, label]) => {
-                const opt = document.createElement('option');
-                opt.value = key;
-                opt.textContent = label;
-                sel.appendChild(opt);
-            });
+        // Tags offered in Add Custom Song: the standard ones plus any in use, the
+        // ones on the most songs first.
+        let addFormTags = new Map(); // tag id -> display name, for chips switched on
+
+        function allTagsByCount() {
+            const counts = new Map(), names = new Map();
+            DEFAULT_TAGS.forEach((t) => { counts.set(tagId(t), 0); names.set(tagId(t), t); });
+            buildSongList().forEach(sg => sg.tags.forEach((disp, id) => {
+                counts.set(id, (counts.get(id) || 0) + 1);
+                if (!names.has(id)) names.set(id, disp);
+            }));
+            return Array.from(counts.keys())
+                .sort((a, b) => (counts.get(b) - counts.get(a)) || names.get(a).localeCompare(names.get(b)))
+                .map(id => ({ id: id, name: names.get(id), n: counts.get(id) }));
         }
 
-        function categoryLabel(key) {
-            const found = CATEGORIES.find(c => c[0] === key);
-            return found ? found[1] : key;
+        function renderAddTagChips() {
+            const box = document.getElementById('custom-tag-chips');
+            if (!box) return;
+            box.innerHTML = '';
+            allTagsByCount().forEach((t) => {
+                const b = document.createElement('button');
+                b.className = 'chip' + tagColorClass(t.id) + (addFormTags.has(t.id) ? ' active' : '');
+                b.textContent = t.name;
+                b.onclick = () => {
+                    if (addFormTags.has(t.id)) addFormTags.delete(t.id); else addFormTags.set(t.id, t.name);
+                    renderAddTagChips();
+                };
+                box.appendChild(b);
+            });
         }
 
         function addCustomTrack() {
@@ -1056,54 +1173,53 @@
 
             const uri = parseSpotifyTrackId(document.getElementById('custom-link-input').value);
             const name = document.getElementById('custom-name-input').value.trim();
-            const category = document.getElementById('custom-category-select').value;
             const startSec = parseStartTime(document.getElementById('custom-start-input').value);
 
             if (!uri) return setStatus("That doesn't look like a Spotify song link.", false);
             if (!name) return setStatus('Please enter a song name.', false);
-            if (!category) return setStatus('Please pick a button.', false);
+            const already = buildSongList().find(sg => sg.uri === uri);
+            if (already) return setStatus('"' + already.name + '" is already in the list.', false);
+
+            // Tags: the chips switched on, plus anything typed in the new-tag box
+            const tags = [];
+            const seen = new Set();
+            Array.from(addFormTags.values())
+                .concat(splitTags(document.getElementById('custom-newtag-input').value))
+                .forEach((t) => { if (!seen.has(tagId(t))) { seen.add(tagId(t)); tags.push(t); } });
 
             const entry = { uri: uri, name: name };
             if (startSec > 0) entry.startSec = startSec;
-
-            if (!customTracks[category]) customTracks[category] = [];
-            customTracks[category].push(entry);
-            saveCustomTracks();
+            if (tags.length) entry.tags = tags;
+            customSongs.push(entry);
+            saveCustomSongs();
 
             document.getElementById('custom-link-input').value = '';
             document.getElementById('custom-name-input').value = '';
             document.getElementById('custom-start-input').value = '';
-            setStatus('✓ Added "' + name + '" to ' + categoryLabel(category), true);
+            document.getElementById('custom-newtag-input').value = '';
+            addFormTags = new Map();
+            renderAddTagChips();
+            setStatus('✓ Added "' + name + '"' + (tags.length ? ' — ' + tags.join(', ') : ' (between whistles)'), true);
+            updateLibraryCount();
         }
 
         function removeCustomByUri(uri) {
-            Object.keys(customTracks).forEach((k) => {
-                customTracks[k] = (customTracks[k] || []).filter(t => t.uri !== uri);
-            });
-            saveCustomTracks();
-        }
-
-        function removeCustomTrack(category, index) {
-            if (customTracks[category]) {
-                customTracks[category].splice(index, 1);
-                saveCustomTracks();
-            }
+            customSongs = customSongs.filter(t => t.uri !== uri);
+            saveCustomSongs();
         }
 
         // --- EXPORT / IMPORT CUSTOM SONGS (JSON file) ---
         const EXPORT_APP_ID = 'wild-hockey-music-player';
-        let pendingImport = null; // sanitized {cat:[...]} awaiting Add/Replace
+        let pendingImport = null; // sanitized song list awaiting Add/Replace
 
-        function customTrackCount(store) {
-            return Object.keys(store || {}).reduce((n, k) => n + (store[k] ? store[k].length : 0), 0);
-        }
+        function customTrackCount() { return customSongs.length; }
 
         function buildExportJson() {
             return JSON.stringify({
                 app: EXPORT_APP_ID,
                 type: 'custom-songs',
-                version: 1,
-                customTracks: customTracks
+                version: 2,
+                customSongs: customSongs
             }, null, 2);
         }
 
@@ -1120,7 +1236,7 @@
                 a.click();
                 document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                const n = customTrackCount(customTracks);
+                const n = customTrackCount();
                 setStatus(n ? ('✓ Exported ' + n + ' custom song' + (n === 1 ? '' : 's')) : 'Exported (no custom songs yet)', true);
             } catch (e) {
                 console.error('Export failed:', e);
@@ -1128,33 +1244,20 @@
             }
         }
 
-        // Accept the wrapped payload or a bare {cat:[...]} object; keep only
-        // valid categories and well-formed entries. Returns {clean, count}.
+        // Accepts a current export file ({customSongs: [...]}), a bare list, or the
+        // older per-category file ({customTracks: {category: [...]}}). Keeps only
+        // well-formed songs. Returns {clean, count}.
         function sanitizeImported(obj) {
-            const source = (obj && obj.customTracks && typeof obj.customTracks === 'object') ? obj.customTracks : obj;
-            const clean = {};
-            let count = 0;
-            if (!source || typeof source !== 'object') return { clean, count };
-            CATEGORIES.forEach(([key]) => {
-                const arr = source[key];
-                if (!Array.isArray(arr)) return;
-                arr.forEach((entry) => {
-                    if (!entry || typeof entry !== 'object') return;
-                    const uri = parseSpotifyTrackId(entry.uri);
-                    const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-                    if (!uri || !name) return;
-                    const out = { uri: uri, name: name };
-                    if (typeof entry.startSec === 'number' && entry.startSec > 0) out.startSec = Math.round(entry.startSec);
-                    if (Array.isArray(entry.tags)) {
-                        const tg = entry.tags.map(x => String(x).trim()).filter(Boolean);
-                        if (tg.length) out.tags = tg;
-                    }
-                    if (!clean[key]) clean[key] = [];
-                    clean[key].push(out);
-                    count++;
-                });
-            });
-            return { clean, count };
+            let clean = [];
+            const list = Array.isArray(obj) ? obj
+                : (obj && Array.isArray(obj.customSongs)) ? obj.customSongs : null;
+            if (list) {
+                list.forEach((entry) => { const song = cleanSong(entry); if (song) addSongTo(clean, song); });
+            } else if (obj && typeof obj === 'object') {
+                const dict = (obj.customTracks && typeof obj.customTracks === 'object') ? obj.customTracks : obj;
+                clean = songsFromCategories(dict);
+            }
+            return { clean: clean, count: clean.length };
         }
 
         function handleImportFileSelect() {
@@ -1186,22 +1289,18 @@
 
             let added = 0, skipped = 0;
             if (mode === 'replace') {
-                const clone = {};
-                Object.keys(pendingImport).forEach(k => { clone[k] = pendingImport[k].slice(); added += pendingImport[k].length; });
-                customTracks = clone;
+                customSongs = pendingImport.map(sg => Object.assign({}, sg));
+                added = customSongs.length;
             } else {
-                Object.keys(pendingImport).forEach((key) => {
-                    if (!customTracks[key]) customTracks[key] = [];
-                    const existing = new Set(customTracks[key].map(t => t.uri));
-                    pendingImport[key].forEach((entry) => {
-                        if (existing.has(entry.uri)) { skipped++; return; }
-                        customTracks[key].push(entry);
-                        existing.add(entry.uri);
-                        added++;
-                    });
+                const have = new Set(customSongs.map(sg => sg.uri));
+                pendingImport.forEach((sg) => {
+                    if (have.has(sg.uri)) { skipped++; return; }
+                    customSongs.push(Object.assign({}, sg));
+                    have.add(sg.uri);
+                    added++;
                 });
             }
-            saveCustomTracks();
+            saveCustomSongs();
             pendingImport = null;
             const verb = mode === 'replace' ? 'Replaced — ' : 'Added ';
             setStatus('✓ ' + verb + added + ' song' + (added === 1 ? '' : 's') + (skipped ? (', skipped ' + skipped + ' duplicate' + (skipped === 1 ? '' : 's')) : ''), true);
@@ -1215,7 +1314,7 @@
         function updateLibraryCount() {
             const el = document.getElementById('library-count');
             if (!el) return;
-            const n = customTrackCount(customTracks);
+            const n = customTrackCount();
             el.textContent = n ? (n + ' custom song' + (n === 1 ? '' : 's') + ' saved on this device')
                                : 'No custom songs on this device';
             el.style.color = '#8a8f9c';
@@ -1232,7 +1331,7 @@
             const status = document.getElementById('library-reset-status');
             const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
             const btn = document.getElementById('reset-ondevice-btn');
-            const n = customTrackCount(customTracks);
+            const n = customTrackCount();
 
             if (n === 0) { disarmReset(); return setStatus('No on-device songs to clear.', false); }
 
@@ -1245,8 +1344,8 @@
             }
 
             // Confirmed
-            customTracks = {};
-            saveCustomTracks();
+            customSongs = [];
+            saveCustomSongs();
             disarmReset();
             updateLibraryCount();
             setStatus('✓ Cleared ' + n + ' on-device song' + (n === 1 ? '' : 's') + ' — the app now shows built-in songs only.', true);
@@ -1256,7 +1355,7 @@
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
             refreshCacheStatus();
-            populateCategorySelect();
+            renderAddTagChips();
             const el = document.getElementById('reset-status');
             if (el) el.textContent = '';
             const cs = document.getElementById('custom-add-status');
@@ -1377,54 +1476,29 @@
         }
 
         // --- TRACK SELECTOR MODAL ---
-        let currentCategory = null;
         let pickerSlotId = null; // when set, picking a song fills that queue slot instead of playing it
 
-        // Tags: every song is in one merged list. A song's categories are tags
-        // (stored as the category key); optional free tags come from a `tags` list
-        // on the song. Anything matching a category name resolves to that category.
-        const TAG_ALIASES = {};
-        CATEGORIES.forEach(([key, label]) => {
-            TAG_ALIASES[String(key).toLowerCase()] = key;
-            TAG_ALIASES[String(label).toLowerCase()] = key;
-        });
-        function resolveTag(raw) {
-            const t = String(raw == null ? '' : raw).trim().toLowerCase();
-            if (!t) return null;
-            return TAG_ALIASES[t] || t;
-        }
-        function tagLabel(tag) {
-            const c = CATEGORIES.find(x => x[0] === tag);
-            return c ? c[1] : tag;
-        }
-
-        // Merge the repo lists and this device's custom songs into one list, one
-        // entry per Spotify track. A song in two lists simply carries both tags.
+        // Every song in one list: the repo songs plus this device's custom songs, one
+        // entry per Spotify track (a song in both keeps the union of its tags), sorted
+        // by name. Each song's tags are a Map of tag id -> display name.
         function buildSongList() {
             const byUri = new Map();
-            const add = (cat, t, fromCustom) => {
-                const uri = typeof t === 'string' ? t : (t && t.uri);
+            const add = (t, fromCustom) => {
+                const uri = t && t.uri;
                 if (!uri) return;
                 let song = byUri.get(uri);
                 if (!song) {
-                    song = {
-                        uri: uri,
-                        name: (typeof t === 'object' && t.name) || 'Track',
-                        startSec: typeof t === 'object' ? t.startSec : undefined,
-                        tags: new Set(), inRepo: false, inCustom: false
-                    };
+                    song = { uri: uri, name: t.name || 'Track', startSec: t.startSec, tags: new Map(), inRepo: false, inCustom: false };
                     byUri.set(uri, song);
                 }
-                song.tags.add(cat);
                 if (fromCustom) song.inCustom = true; else song.inRepo = true;
-                if (typeof t === 'object' && Array.isArray(t.tags)) {
-                    t.tags.forEach(x => { const r = resolveTag(x); if (r) song.tags.add(r); });
-                }
+                (Array.isArray(t.tags) ? t.tags : []).forEach((x) => {
+                    const disp = cleanTag(x);
+                    if (disp && !song.tags.has(tagId(disp))) song.tags.set(tagId(disp), disp);
+                });
             };
-            CATEGORIES.forEach(([key]) => {
-                (tracks[key] || []).forEach(t => add(key, t, false));
-                (customTracks[key] || []).forEach(t => add(key, t, true));
-            });
+            (Array.isArray(window.SONGS) ? window.SONGS : []).forEach(t => add(t, false));
+            customSongs.forEach(t => add(t, true));
             return Array.from(byUri.values()).sort(
                 (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
             );
@@ -1433,16 +1507,20 @@
         // Picker state: which tags are selected (all must match) and the played filter.
         let pickerTags = new Set();
 
+        // Nothing selected = everything shown. Selected tags add together (a song with ANY of
+        // them shows). Deselecting the last one, or selecting every tag, goes back to everything.
         function toggleTag(tag) {
             if (tag === null) pickerTags.clear();
             else if (pickerTags.has(tag)) pickerTags.delete(tag);
             else pickerTags.add(tag);
+            const allTags = new Set();
+            buildSongList().forEach(sg => sg.tags.forEach((d, id) => allTags.add(id)));
+            if (allTags.size && Array.from(allTags).every(id => pickerTags.has(id))) pickerTags.clear();
             renderSongPicker();
         }
 
-        function openTrackSelector(category, label) {
+        function openTrackSelector(label) {
             if (!accessToken) return alert("Please log in first!");
-            currentCategory = category;
             document.getElementById('track-modal-title').textContent = label;
             // Always open on the full list; the tag chips are there if you want to narrow it
             pickerTags = new Set();
@@ -1453,25 +1531,35 @@
         function renderSongPicker() {
             const songs = buildSongList();
 
-            // --- tag chips: All, then categories that have songs, then free tags A-Z
-            const counts = new Map();
-            songs.forEach(sg => sg.tags.forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
-            const catKeys = CATEGORIES.map(c => c[0]);
-            const freeTags = Array.from(counts.keys()).filter(t => !catKeys.includes(t)).sort();
-            const chipTags = catKeys.filter(k => counts.has(k) || pickerTags.has(k)).concat(freeTags);
+            // --- tag chips: ✕ (only while filtering), then every tag, the ones on the most songs first
+            const counts = new Map(); // tag id -> number of songs
+            const names = new Map();  // tag id -> display name
+            songs.forEach(sg => sg.tags.forEach((disp, id) => {
+                counts.set(id, (counts.get(id) || 0) + 1);
+                names.set(id, disp);
+            }));
+            const chipTags = Array.from(counts.keys())
+                .sort((a, b) => (counts.get(b) - counts.get(a)) || names.get(a).localeCompare(names.get(b)));
 
             const chips = document.getElementById('tag-chips');
             chips.innerHTML = '';
-            const makeChip = (text, n, active, onClick) => {
+            const makeChip = (text, n, active, onClick, colorCls) => {
                 const b = document.createElement('button');
-                b.className = 'chip' + (active ? ' active' : '');
+                b.className = 'chip' + (colorCls || '') + (active ? ' active' : '');
                 b.appendChild(document.createTextNode(text));
                 if (n != null) { const sp = document.createElement('span'); sp.className = 'chip-n'; sp.textContent = n; b.appendChild(sp); }
                 b.onclick = onClick;
                 return b;
             };
-            chips.appendChild(makeChip('All', songs.length, pickerTags.size === 0, () => toggleTag(null)));
-            chipTags.forEach(t => chips.appendChild(makeChip(tagLabel(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t))));
+            if (pickerTags.size) {
+                const x = document.createElement('button');
+                x.className = 'chip chip-clear';
+                x.textContent = '✕';
+                x.title = 'Clear tag filters';
+                x.onclick = () => toggleTag(null);
+                chips.appendChild(x);
+            }
+            chipTags.forEach(t => chips.appendChild(makeChip(names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t), tagColorClass(t))));
 
             // --- filter, then split into three groups (a song is in exactly one):
             //   available -> not queued and not played yet (top, no heading)
@@ -1482,7 +1570,7 @@
                 const q = queueState[sl.id];
                 if (q && q.uri) queuedBy.set(q.uri, (queuedBy.get(q.uri) || []).concat(sl.label));
             });
-            const matching = songs.filter(sg => Array.from(pickerTags).every(t => sg.tags.has(t)));
+            const matching = pickerTags.size ? songs.filter(sg => Array.from(pickerTags).some(t => sg.tags.has(t))) : songs;
             const isQueued = sg => queuedBy.has(sg.uri);
             const isPlayed = sg => (playCounts[sg.uri] || 0) > 0;
             const queued = matching.filter(isQueued);
@@ -1497,11 +1585,11 @@
                 const note = document.createElement('div');
                 note.style.cssText = 'padding:20px;color:#8a8f9c;text-align:center;';
                 if (songs.length === 0) {
-                    note.textContent = window.TRACKS
+                    note.textContent = Array.isArray(window.SONGS)
                         ? 'No songs yet. Add one under ⚙️ Settings → Add Custom Song, or in index.html.'
-                        : 'Track list failed to load — check index.html for a typo (usually a missing comma or quote) in the TRACKS block.';
+                        : 'Song list failed to load — check index.html for a typo (usually a missing comma or quote) in the SONGS block.';
                 } else {
-                    note.textContent = 'No songs have all of those tags. Tap a tag to remove it, or tap All.';
+                    note.textContent = 'No songs have those tags. Tap ✕ to show everything.';
                 }
                 trackList.appendChild(note);
             }
@@ -1536,13 +1624,22 @@
                 if (queuedBy.has(uri)) subParts.push('In ' + queuedBy.get(uri).join(' + '));
                 if (song.inCustom && !song.inRepo) subParts.push('Custom');
                 if (startMs > 0) subParts.push(`starts at ${startSec}s`);
-                const freeOnly = Array.from(song.tags).filter(t => !catKeys.includes(t));
-                if (freeOnly.length) subParts.push(freeOnly.join(', '));
                 if (subParts.length) {
                     const subEl = document.createElement('div');
                     subEl.className = 'track-uri';
                     subEl.textContent = subParts.join(' · ');
                     info.appendChild(subEl);
+                }
+                if (song.tags.size) {
+                    const pills = document.createElement('div');
+                    pills.className = 'tag-pills';
+                    song.tags.forEach((disp, id) => {
+                        const pill = document.createElement('span');
+                        pill.className = 'tag-pill' + tagColorClass(id);
+                        pill.textContent = disp;
+                        pills.appendChild(pill);
+                    });
+                    info.appendChild(pills);
                 }
                 item.appendChild(info);
 
@@ -1590,7 +1687,6 @@
 
         function closeTrackSelector() {
             document.getElementById('track-modal').style.display = 'none';
-            currentCategory = null;
             pickerSlotId = null;
         }
 
@@ -1600,14 +1696,14 @@
         // Music is what clears that tile. Tap an empty slot to choose a song; the
         // pencil swaps one.
         const QUEUE_SLOTS = [
-            { id: 'w1', cat: 'whistles',       label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
-            { id: 'w2', cat: 'whistles',       label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
-            { id: 'w3', cat: 'whistles',       label: 'Whistle 3',    emoji: '🎵', accent: 'purple' },
-            { id: 'w4', cat: 'whistles',       label: 'Whistle 4',    emoji: '🎵', accent: 'purple' },
-            { id: 'gf', cat: 'goalFor',        label: 'Goal FOR',     emoji: '🚨', accent: 'green' },
-            { id: 'ga', cat: 'goalAgainst',    label: 'Goal AGAINST', emoji: '🥅', accent: 'red' },
-            { id: 'pp', cat: 'penaltyFor',     label: 'Powerplay',    emoji: '💪', accent: 'blue' },
-            { id: 'pk', cat: 'penaltyAgainst', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' }
+            { id: 'w1', label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
+            { id: 'w2', label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
+            { id: 'w3', label: 'Whistle 3',    emoji: '🎵', accent: 'purple' },
+            { id: 'w4', label: 'Whistle 4',    emoji: '🎵', accent: 'purple' },
+            { id: 'gf', label: 'Goal For',     emoji: '🚨', accent: 'green' },
+            { id: 'ga', label: 'Goal Against', emoji: '🥅', accent: 'red' },
+            { id: 'pp', label: 'Power Play',   emoji: '💪', accent: 'blue' },
+            { id: 'pk', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' }
         ];
         let queueState = {};
         try { queueState = JSON.parse(lsGet('queue_slots') || '{}') || {}; } catch (e) { queueState = {}; }
@@ -1668,7 +1764,7 @@
             const slot = QUEUE_SLOTS.find(x => x.id === slotId);
             if (!slot) return;
             pickerSlotId = slotId;
-            openTrackSelector(slot.cat, 'Choose: ' + slot.label);
+            openTrackSelector('Choose: ' + slot.label);
             // openTrackSelector bails out when logged out; don't leave picker mode armed
             if (!accessToken) pickerSlotId = null;
         }
