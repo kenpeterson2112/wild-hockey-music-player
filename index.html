@@ -288,9 +288,14 @@
             width: 32px;
             height: 32px;
         }
+        /* Song picker: fixed size so a short (filtered) list doesn't shrink the window */
+        .track-modal-content { height: min(80vh, 640px); max-height: none; }
+        .track-modal-content .modal-header { flex-shrink: 0; }
         .track-list {
             overflow-y: auto;
             padding: 12px;
+            flex: 1 1 auto;
+            min-height: 0;
         }
         .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; }
         .tag-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
@@ -301,6 +306,21 @@
         }
         .chip .chip-n { opacity: 0.6; font-weight: 500; margin-left: 4px; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
+        /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
+           Power Play blue, Penalty Kill amber, End Game orange). Other tags stay neutral. */
+        .tc-green  { --tc: #1DB954; }
+        .tc-red    { --tc: #e0455e; }
+        .tc-blue   { --tc: #3b82f6; }
+        .tc-amber  { --tc: #f59e0b; }
+        .tc-orange { --tc: #fb7139; }
+        .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
+        .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
+        .tag-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+        .tag-pill {
+            font-size: 0.7rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px;
+            color: var(--tc, #8a8f9c); border: 1px solid var(--tc, #8a8f9c);
+            background: #20232c; background: color-mix(in srgb, var(--tc, #8a8f9c) 16%, #20232c);
+        }
         .list-divider {
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
@@ -457,7 +477,7 @@
     </div>
 
     <div id="track-modal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content track-modal-content">
             <div class="modal-header">
                 <span class="modal-title" id="track-modal-title">Select Track</span>
                 <button class="modal-close" onclick="closeTrackSelector()">✕</button>
@@ -1002,6 +1022,9 @@
             return LEGACY_TAGS[compact] || t;
         }
         function tagId(display) { return String(display).toLowerCase(); }
+        // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange' };
+        function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)
         function splitTags(text) {
@@ -1133,7 +1156,7 @@
             box.innerHTML = '';
             allTagsByCount().forEach((t) => {
                 const b = document.createElement('button');
-                b.className = 'chip' + (addFormTags.has(t.id) ? ' active' : '');
+                b.className = 'chip' + tagColorClass(t.id) + (addFormTags.has(t.id) ? ' active' : '');
                 b.textContent = t.name;
                 b.onclick = () => {
                     if (addFormTags.has(t.id)) addFormTags.delete(t.id); else addFormTags.set(t.id, t.name);
@@ -1514,16 +1537,16 @@
 
             const chips = document.getElementById('tag-chips');
             chips.innerHTML = '';
-            const makeChip = (text, n, active, onClick) => {
+            const makeChip = (text, n, active, onClick, colorCls) => {
                 const b = document.createElement('button');
-                b.className = 'chip' + (active ? ' active' : '');
+                b.className = 'chip' + (colorCls || '') + (active ? ' active' : '');
                 b.appendChild(document.createTextNode(text));
                 if (n != null) { const sp = document.createElement('span'); sp.className = 'chip-n'; sp.textContent = n; b.appendChild(sp); }
                 b.onclick = onClick;
                 return b;
             };
             chips.appendChild(makeChip('All', songs.length, pickerTags.size === 0, () => toggleTag(null)));
-            chipTags.forEach(t => chips.appendChild(makeChip(names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t))));
+            chipTags.forEach(t => chips.appendChild(makeChip(names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t), tagColorClass(t))));
 
             // --- filter, then split into three groups (a song is in exactly one):
             //   available -> not queued and not played yet (top, no heading)
@@ -1588,13 +1611,22 @@
                 if (queuedBy.has(uri)) subParts.push('In ' + queuedBy.get(uri).join(' + '));
                 if (song.inCustom && !song.inRepo) subParts.push('Custom');
                 if (startMs > 0) subParts.push(`starts at ${startSec}s`);
-                const tagNames = Array.from(song.tags.values());
-                if (tagNames.length) subParts.push(tagNames.join(', '));
                 if (subParts.length) {
                     const subEl = document.createElement('div');
                     subEl.className = 'track-uri';
                     subEl.textContent = subParts.join(' · ');
                     info.appendChild(subEl);
+                }
+                if (song.tags.size) {
+                    const pills = document.createElement('div');
+                    pills.className = 'tag-pills';
+                    song.tags.forEach((disp, id) => {
+                        const pill = document.createElement('span');
+                        pill.className = 'tag-pill' + tagColorClass(id);
+                        pill.textContent = disp;
+                        pills.appendChild(pill);
+                    });
+                    info.appendChild(pills);
                 }
                 item.appendChild(info);
 
