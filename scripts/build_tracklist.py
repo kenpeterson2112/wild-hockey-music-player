@@ -44,6 +44,8 @@ CATEGORY_STYLE = {
     "penaltyFor": ("💪", "#3b82f6"),
     "penaltyAgainst": ("⚠️", "#f59e0b"),
     "endGame": ("🔥", "#fb7139"),
+    "puckDrop": ("🏒", "#a855f7"),
+    "wild": ("🌲", "#DDCBA4"),
 }
 
 PAGE = """<!DOCTYPE html>
@@ -198,8 +200,8 @@ def render_section(key, entries):
     return "\n".join(lines)
 
 
-def main():
-    songs = extract_songs(INDEX_HTML.read_text(encoding="utf-8"))
+def build_page(songs, updated=None):
+    """Render the whole track list page for `songs` (used by main and check_app)."""
     tracks = songs_by_section(songs)
     sections = "\n".join(
         render_section(key, tracks.get(key, [])) for key in SECTION_LABELS
@@ -212,13 +214,18 @@ def main():
         else ""
     )
 
-    page = PAGE.format(
+    return PAGE.format(
         total=total,
-        updated=datetime.date.today().strftime("%B %-d, %Y"),
+        updated=updated or datetime.date.today().strftime("%B %-d, %Y"),
         sections=sections,
         form_button=form_button,
     )
 
+
+def main():
+    songs = extract_songs(INDEX_HTML.read_text(encoding="utf-8"))
+    total = len(songs)
+    page = build_page(songs)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(page, encoding="utf-8")
     print(f"Wrote {total} songs to {OUTPUT}")

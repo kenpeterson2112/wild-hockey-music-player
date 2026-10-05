@@ -20,7 +20,7 @@ INDEX_HTML = REPO_ROOT / "index.html"
 
 # The tags the app and these scripts know by name, in the order they are shown.
 # Any other tag a song carries is kept and shown too.
-TAG_ORDER = ["Power Play", "Goal For", "Goal Against", "Penalty Kill", "End Game"]
+TAG_ORDER = ["Power Play", "Goal For", "Goal Against", "Penalty Kill", "End Game", "Puck Drop", "Wild"]
 
 # Old spellings and category names -> the tag they mean. Keys are compact
 # (lowercase letters and digits only), so "Goal FOR", "goalFor" and "goal for"
@@ -34,6 +34,7 @@ LEGACY_TAGS = {
     "penaltyagainst": "Penalty Kill",
     "endgame": "End Game",
     "endgameintensity": "End Game",
+    "puckdrop": "Puck Drop",
     "pregame": "Pregame",
 }
 
@@ -222,11 +223,13 @@ def songs_by_section(songs):
 # Section key -> heading, in the order the track list page shows them.
 SECTION_LABELS = {
     "whistles": "Between Whistles",
+    "puckDrop": "Puck Drop",
     "goalFor": "Goal For",
     "goalAgainst": "Goal Against",
     "penaltyFor": "Power Play",
     "penaltyAgainst": "Penalty Kill",
     "endGame": "End Game",
+    "wild": "Wild",
 }
 TAG_TO_SECTION = {
     "Power Play": "penaltyFor",
@@ -234,4 +237,6 @@ TAG_TO_SECTION = {
     "Goal Against": "goalAgainst",
     "Penalty Kill": "penaltyAgainst",
     "End Game": "endGame",
+    "Puck Drop": "puckDrop",
+    "Wild": "wild",
 }
