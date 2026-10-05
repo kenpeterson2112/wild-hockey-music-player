@@ -91,16 +91,6 @@
             justify-content: center;
             border: 1px solid #333842;
         }
-        .status-dot {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background: #6b7db3;
-            transition: background 0.3s;
-        }
-        .status-dot.connected { background: #1DB954; }
-        .status-dot.refreshing { background: #f59e0b; animation: blink 1.2s infinite; }
-        .status-dot.expired { background: #e0455e; }
         @keyframes blink { 50% { opacity: 0.3; } }
 
         /* --- Sound grid --- */
@@ -186,6 +176,16 @@
             background: linear-gradient(135deg, #1e40af 0%, #2547c9 100%);
             border-color: #4f7cff;
         }
+        .now-playing.no-spotify {
+            background: linear-gradient(135deg, #7f1d2b 0%, #b3263c 100%);
+            border-color: #e0455e;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .now-playing.no-spotify .np-dot, .now-playing.no-spotify .np-text { display: none; }
+        .np-nospotify { display: none; color: #fff; font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px; text-align: center; }
+        .np-nospotify small { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; letter-spacing: 0; }
+        .now-playing.no-spotify .np-nospotify { display: block; }
         .np-dot {
             width: 12px;
             height: 12px;
@@ -492,7 +492,8 @@
 
         <div class="grid" id="queue-grid"></div>
 
-        <div id="now-playing" class="now-playing">
+        <div id="now-playing" class="now-playing" onclick="nowPlayingTap()">
+            <div class="np-nospotify">No Spotify<small>Tap to choose a device</small></div>
             <div class="np-dot"></div>
             <div class="np-text">
                 <div class="now-playing-label">Now Playing</div>
@@ -920,8 +921,8 @@
         }
 
         function setSyncStatus(state) {
-            const dot = document.getElementById('sync-dot');
-            if (dot) dot.className = 'status-dot ' + state;
+            const bar = document.getElementById('now-playing');
+            if (bar) bar.classList.toggle('no-spotify', state === 'expired');
             const txt = document.getElementById('spotify-conn-status');
             if (txt) {
                 if (state === 'connected') { txt.textContent = '✓ Connected'; txt.style.color = '#1DB954'; }
@@ -930,7 +931,14 @@
             }
         }
 
-        // Corner dot / Settings button: refresh silently if we can, else full re-login.
+        // The Now Playing bar turns red with "No Spotify" when there is no connection;
+        // tapping it opens Settings (devices + Reconnect).
+        function nowPlayingTap() {
+            const bar = document.getElementById('now-playing');
+            if (bar && bar.classList.contains('no-spotify')) openSettings();
+        }
+
+        // Settings button: refresh silently if we can, else full re-login.
         async function resyncSpotify() {
             if (lsGet('spotify_refresh_token')) {
                 setSyncStatus('refreshing');
