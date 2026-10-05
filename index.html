@@ -82,6 +82,7 @@
             border: 1px solid #333842;
         }
         .sync-btn {
+            font-size: 1.4rem;
             flex-shrink: 0;
             background: #23262e;
             padding: 0 16px;
@@ -90,16 +91,6 @@
             justify-content: center;
             border: 1px solid #333842;
         }
-        .status-dot {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background: #6b7db3;
-            transition: background 0.3s;
-        }
-        .status-dot.connected { background: #1DB954; }
-        .status-dot.refreshing { background: #f59e0b; animation: blink 1.2s infinite; }
-        .status-dot.expired { background: #e0455e; }
         @keyframes blink { 50% { opacity: 0.3; } }
 
         /* --- Sound grid --- */
@@ -185,6 +176,16 @@
             background: linear-gradient(135deg, #1e40af 0%, #2547c9 100%);
             border-color: #4f7cff;
         }
+        .now-playing.no-spotify {
+            background: linear-gradient(135deg, #7f1d2b 0%, #b3263c 100%);
+            border-color: #e0455e;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .now-playing.no-spotify .np-dot, .now-playing.no-spotify .np-text { display: none; }
+        .np-nospotify { display: none; color: #fff; font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px; text-align: center; }
+        .np-nospotify small { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; letter-spacing: 0; }
+        .now-playing.no-spotify .np-nospotify { display: block; }
         .np-dot {
             width: 12px;
             height: 12px;
@@ -312,8 +313,7 @@
         .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; grid-row: span 2; align-self: center; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
-           Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple).
-           Other tags stay neutral. */
+           Power Play blue, Penalty Kill amber, End Game orange). Other tags stay neutral. */
         .tc-green  { --tc: #1DB954; }
         .tc-red    { --tc: #e0455e; }
         .tc-blue   { --tc: #3b82f6; }
@@ -383,8 +383,31 @@
             cursor: pointer;
         }
         .settings-btn-action:active { filter: brightness(1.25); }
-        .settings-body { padding: 20px; overflow-y: auto; }
-        .settings-section { margin-bottom: 24px; }
+        .settings-body { padding: 16px 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+        .settings-section { margin-bottom: 18px; }
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .settings-section .settings-grid .settings-btn-action { margin-top: 0; padding: 14px 8px; font-size: 0.9rem; }
+        .status-line:empty { display: none; }
+        .clear-hint { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
+        .clear-opt {
+            width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+            background: #20232c; border: 2px solid #2c313d; border-radius: 12px; padding: 14px; margin-bottom: 10px;
+            color: #fff; font-family: inherit; font-size: 1rem;
+        }
+        .clear-opt .clear-text { display: flex; flex-direction: column; gap: 3px; }
+        .clear-opt .clear-text span { font-size: 0.8rem; color: #8a8f9c; }
+        .clear-box { flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; border: 2px solid #4a5160; display: flex; align-items: center; justify-content: center; }
+        .clear-opt.on { border-color: #e0455e; }
+        .clear-opt.on .clear-box { background: #e0455e; border-color: #e0455e; }
+        .clear-opt.on .clear-box::after { content: "✓"; color: #fff; font-weight: 700; font-size: 0.95rem; }
+        .clear-go { background: #e0455e; border-color: #e0455e; margin-bottom: 8px; }
+        .clear-go:disabled { background: #2c313d; border-color: #3a4150; color: #6f7686; }
+        .settings-more { border-top: 1px solid #2a2e38; padding: 12px 0 4px; }
+        .settings-more summary { cursor: pointer; font-weight: 700; color: #c9ccd4; font-size: 0.95rem; }
+        .settings-more[open] summary { margin-bottom: 10px; color: #1DB954; }
+        .settings-more p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
+        .settings-more input[type="file"] { width: 100%; padding: 11px; background: #20232c; border: 1px solid #2c313d; border-radius: 8px; color: white; font-family: inherit; margin-top: 8px; }
+        .settings-more .settings-btn-action { margin-top: 8px; }
         .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
         .settings-section p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .settings-section input[type="file"],
@@ -464,15 +487,14 @@
             <button class="btn-full" id="pregame-btn" onclick="playPregame()">
                 <span>📣</span> Pregame Announcement
             </button>
-            <button class="sync-btn" onclick="resyncSpotify()" title="Spotify connection — tap to reconnect">
-                <span id="sync-dot" class="status-dot"></span>
-            </button>
+            <button class="sync-btn" onclick="openClearModal()" title="Clear played songs / empty the soundboard">🧹</button>
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
 
         <div class="grid" id="queue-grid"></div>
 
-        <div id="now-playing" class="now-playing">
+        <div id="now-playing" class="now-playing" onclick="nowPlayingTap()">
+            <div class="np-nospotify">No Spotify<small>Tap to choose a device</small></div>
             <div class="np-dot"></div>
             <div class="np-text">
                 <div class="now-playing-label">Now Playing</div>
@@ -496,29 +518,59 @@
         </div>
     </div>
 
-    <div id="settings-modal" class="modal" style="display: none;">
+    <div id="clear-modal" class="modal" style="display: none;">
         <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Clear</span>
+                <button class="modal-close" onclick="closeClearModal()">✕</button>
+            </div>
+            <div class="settings-body">
+                <p class="clear-hint">Pick one or both, then tap Clear.</p>
+                <button class="clear-opt" id="clear-opt-played" onclick="toggleClearOpt('played')">
+                    <span class="clear-box"></span>
+                    <span class="clear-text"><b>Clear the played list</b><span id="clear-played-n"></span></span>
+                </button>
+                <button class="clear-opt" id="clear-opt-board" onclick="toggleClearOpt('board')">
+                    <span class="clear-box"></span>
+                    <span class="clear-text"><b>Empty the soundboard</b><span id="clear-board-n"></span></span>
+                </button>
+                <button class="settings-btn-action clear-go" id="clear-go-btn" onclick="applyClear()" disabled>Clear</button>
+                <button class="settings-btn-action" onclick="closeClearModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content track-modal-content">
             <div class="modal-header">
                 <span class="modal-title">Settings</span>
                 <button class="modal-close" onclick="closeSettings()">✕</button>
             </div>
             <div class="settings-body">
                 <div class="settings-section">
-                    <h3>Add Custom Song</h3>
-                    <p>Paste a Spotify song link and name it. It's saved on this device and shows up in the song list. Leave the tags empty for a between-whistles song.</p>
-                    <input type="text" id="custom-link-input" placeholder="Paste Spotify song link">
-                    <input type="text" id="custom-name-input" placeholder="Song name">
-                    <input type="text" id="custom-start-input" placeholder="Start time m:ss (optional)">
-                    <div class="tag-picker-label">Tags (tap any that apply)</div>
-                    <div id="custom-tag-chips" class="tag-picker"></div>
-                    <input type="text" id="custom-newtag-input" placeholder="New tag (optional)">
-                    <button class="settings-btn-action" onclick="addCustomTrack()">Add song</button>
-                    <div id="custom-add-status" class="status-line"></div>
+                    <h3>Playback Device</h3>
+                    <p>Open Spotify on the device you want, then tap it here.</p>
+                    <div id="device-list"></div>
+                    <button class="settings-btn-action" onclick="loadDevices()">Refresh devices</button>
+                    <div id="device-status" class="status-line"></div>
                 </div>
 
                 <div class="settings-section">
-                    <h3>Library Management</h3>
-                    <p>Songs you add on this device live only here. <b>Export</b> to back them up, share with someone, or send to have them added to the app's built-in list. Then <b>Reset</b> so this device just mirrors the built-in list.</p>
+                    <h3>Game Tools</h3>
+                    <div class="settings-grid">
+                        <button class="settings-btn-action" onclick="resetPlayCounts()">Reset play counter</button>
+                        <button class="settings-btn-action" onclick="resyncSpotify()">Reconnect Spotify</button>
+                        <button class="settings-btn-action" onclick="cacheBuiltInPregame(true)">Save pregame offline</button>
+                        <button class="settings-btn-action" onclick="openAddSong()">➕ Add a song</button>
+                    </div>
+                    <div id="reset-status" class="status-line"></div>
+                    <div id="spotify-conn-status" class="status-line"></div>
+                    <div id="pregame-cache-status" class="status-line"></div>
+                </div>
+
+                <details class="settings-more">
+                    <summary>Backup &amp; share my songs</summary>
+                    <p>Songs you add live only on this device. <b>Export</b> to back them up or send them to be added to the built-in list, then <b>Reset</b> so this device mirrors the built-in list.</p>
                     <div id="library-count" class="status-line"></div>
                     <button class="settings-btn-action" onclick="exportCustomTracks()">Export custom songs</button>
                     <input type="file" id="import-file-input" accept="application/json,.json" onchange="handleImportFileSelect()">
@@ -527,42 +579,35 @@
                     <div id="import-status" class="status-line"></div>
                     <button class="settings-btn-action" id="reset-ondevice-btn" onclick="resetOnDeviceSongs()">Reset on-device songs</button>
                     <div id="library-reset-status" class="status-line"></div>
-                </div>
+                </details>
 
-                <div class="settings-section">
-                    <h3>Playback Device</h3>
-                    <p>Choose which device the music plays on. Open Spotify on that device first so it shows up here, then tap it.</p>
-                    <div id="device-list"></div>
-                    <button class="settings-btn-action" onclick="loadDevices()">Refresh devices</button>
-                    <div id="device-status" class="status-line"></div>
-                </div>
-
-                <div class="settings-section">
-                    <h3>Spotify Connection</h3>
-                    <p>The connection renews itself automatically. Tap here if playback ever stops responding.</p>
-                    <button class="settings-btn-action" onclick="resyncSpotify()">Reconnect to Spotify</button>
-                    <div id="spotify-conn-status" class="status-line"></div>
-                </div>
-
-                <div class="settings-section">
-                    <h3>Pregame Announcement</h3>
-                    <p>The Pregame button plays the announcement built into the app. Tap below
-                    before the game to save it on this phone so it plays with no signal.</p>
-                    <button class="settings-btn-action" onclick="cacheBuiltInPregame(true)">Save announcement for offline</button>
-                    <div id="pregame-cache-status" class="status-line"></div>
-                    <p style="margin-top:16px;">Optional: upload your own file to use instead.
-                    Remove it to go back to the built-in announcement.</p>
+                <details class="settings-more">
+                    <summary>Use my own pregame file</summary>
+                    <p>Upload a file to play instead of the built-in announcement. Remove it to go back.</p>
                     <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()">
                     <button class="settings-btn-action" id="pregame-remove-btn" style="display: none;" onclick="removePregameFile()">Remove file</button>
                     <div id="pregame-file-status" class="status-line"></div>
-                </div>
+                </details>
+            </div>
+        </div>
+    </div>
 
-                <div class="settings-section">
-                    <h3>Play Counts</h3>
-                    <p>Zero out how many times each track has been played, for a new game</p>
-                    <button class="settings-btn-action" onclick="resetPlayCounts()">Reset play counter</button>
-                    <div id="reset-status" class="status-line"></div>
-                </div>
+    <div id="add-song-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Add a song</span>
+                <button class="modal-close" onclick="closeAddSong()">✕</button>
+            </div>
+            <div class="settings-body settings-section">
+                <p>Paste a Spotify song link and name it. It's saved on this device and shows up in the song list. Leave the tags empty for a between-whistles song.</p>
+                <input type="text" id="custom-link-input" placeholder="Paste Spotify song link">
+                <input type="text" id="custom-name-input" placeholder="Song name">
+                <input type="text" id="custom-start-input" placeholder="Start time m:ss (optional)">
+                <div class="tag-picker-label">Tags (tap any that apply)</div>
+                <div id="custom-tag-chips" class="tag-picker"></div>
+                <input type="text" id="custom-newtag-input" placeholder="New tag (optional)">
+                <button class="settings-btn-action" onclick="addCustomTrack()">Add song</button>
+                <div id="custom-add-status" class="status-line"></div>
             </div>
         </div>
     </div>
@@ -896,8 +941,8 @@
         }
 
         function setSyncStatus(state) {
-            const dot = document.getElementById('sync-dot');
-            if (dot) dot.className = 'status-dot ' + state;
+            const bar = document.getElementById('now-playing');
+            if (bar) bar.classList.toggle('no-spotify', state === 'expired');
             const txt = document.getElementById('spotify-conn-status');
             if (txt) {
                 if (state === 'connected') { txt.textContent = '✓ Connected'; txt.style.color = '#1DB954'; }
@@ -906,7 +951,14 @@
             }
         }
 
-        // Corner dot / Settings button: refresh silently if we can, else full re-login.
+        // The Now Playing bar turns red with "No Spotify" when there is no connection;
+        // tapping it opens Settings (devices + Reconnect).
+        function nowPlayingTap() {
+            const bar = document.getElementById('now-playing');
+            if (bar && bar.classList.contains('no-spotify')) openSettings();
+        }
+
+        // Settings button: refresh silently if we can, else full re-login.
         async function resyncSpotify() {
             if (lsGet('spotify_refresh_token')) {
                 setSyncStatus('refreshing');
@@ -1013,6 +1065,40 @@
             if (!uri) return;
             playCounts[uri] = (playCounts[uri] || 0) + 1;
             lsSet('play_counts', JSON.stringify(playCounts));
+        }
+
+        // --- CLEAR MODAL: clear the played list, empty the soundboard, or both ---
+        let clearPicks = { played: false, board: false };
+        function playedCount() { return Object.keys(playCounts).filter(k => playCounts[k] > 0).length; }
+        function queuedCount() { return Object.keys(queueState).filter(k => queueState[k]).length; }
+        function refreshClearModal() {
+            ['played', 'board'].forEach((k) => {
+                document.getElementById('clear-opt-' + k).className = 'clear-opt' + (clearPicks[k] ? ' on' : '');
+            });
+            const np = playedCount(), nb = queuedCount();
+            document.getElementById('clear-played-n').textContent = np + ' song' + (np === 1 ? '' : 's') + ' played this game';
+            document.getElementById('clear-board-n').textContent = nb + ' of ' + QUEUE_SLOTS.length + ' tiles filled';
+            document.getElementById('clear-go-btn').disabled = !(clearPicks.played || clearPicks.board);
+        }
+        function openClearModal() {
+            clearPicks = { played: false, board: false };
+            refreshClearModal();
+            document.getElementById('clear-modal').style.display = 'flex';
+        }
+        function closeClearModal() { document.getElementById('clear-modal').style.display = 'none'; }
+        function toggleClearOpt(k) { clearPicks[k] = !clearPicks[k]; refreshClearModal(); }
+        function applyClear() {
+            if (clearPicks.played) {
+                playCounts = {};
+                lsSet('play_counts', JSON.stringify(playCounts));
+            }
+            if (clearPicks.board) {
+                queueState = {};
+                activeSlotId = null;
+                saveQueue();
+                renderQueue();
+            }
+            closeClearModal();
         }
 
         function resetPlayCounts() {
@@ -1381,11 +1467,8 @@
             document.getElementById('settings-modal').style.display = 'flex';
             updatePregameFileStatus();
             refreshCacheStatus();
-            renderAddTagChips();
             const el = document.getElementById('reset-status');
             if (el) el.textContent = '';
-            const cs = document.getElementById('custom-add-status');
-            if (cs) cs.textContent = '';
             const is = document.getElementById('import-status');
             if (is) is.textContent = '';
             pendingImport = null;
@@ -1396,6 +1479,15 @@
             loadDevices();
         }
 
+        function openAddSong() {
+            renderAddTagChips();
+            const cs = document.getElementById('custom-add-status');
+            if (cs) cs.textContent = '';
+            document.getElementById('add-song-modal').style.display = 'flex';
+        }
+        function closeAddSong() {
+            document.getElementById('add-song-modal').style.display = 'none';
+        }
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
         }
@@ -1541,7 +1633,7 @@
             else pickerTags.add(tag);
             const allTags = new Set();
             buildSongList().forEach(sg => sg.tags.forEach((d, id) => allTags.add(id)));
-            if (allTags.size && Array.from(allTags).every(id => pickerTags.has(id))) pickerTags.clear();
+            if (allTags.size > 1 && Array.from(allTags).every(id => pickerTags.has(id))) pickerTags.clear();
             renderSongPicker();
         }
 
