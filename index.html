@@ -82,6 +82,7 @@
             border: 1px solid #333842;
         }
         .sync-btn {
+            font-size: 1.4rem;
             flex-shrink: 0;
             background: #23262e;
             padding: 0 16px;
@@ -386,6 +387,20 @@
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .settings-section .settings-grid .settings-btn-action { margin-top: 0; padding: 14px 8px; font-size: 0.9rem; }
         .status-line:empty { display: none; }
+        .clear-hint { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
+        .clear-opt {
+            width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+            background: #20232c; border: 2px solid #2c313d; border-radius: 12px; padding: 14px; margin-bottom: 10px;
+            color: #fff; font-family: inherit; font-size: 1rem;
+        }
+        .clear-opt .clear-text { display: flex; flex-direction: column; gap: 3px; }
+        .clear-opt .clear-text span { font-size: 0.8rem; color: #8a8f9c; }
+        .clear-box { flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; border: 2px solid #4a5160; display: flex; align-items: center; justify-content: center; }
+        .clear-opt.on { border-color: #e0455e; }
+        .clear-opt.on .clear-box { background: #e0455e; border-color: #e0455e; }
+        .clear-opt.on .clear-box::after { content: "✓"; color: #fff; font-weight: 700; font-size: 0.95rem; }
+        .clear-go { background: #e0455e; border-color: #e0455e; margin-bottom: 8px; }
+        .clear-go:disabled { background: #2c313d; border-color: #3a4150; color: #6f7686; }
         .settings-more { border-top: 1px solid #2a2e38; padding: 12px 0 4px; }
         .settings-more summary { cursor: pointer; font-weight: 700; color: #c9ccd4; font-size: 0.95rem; }
         .settings-more[open] summary { margin-bottom: 10px; color: #1DB954; }
@@ -471,9 +486,7 @@
             <button class="btn-full" id="pregame-btn" onclick="playPregame()">
                 <span>📣</span> Pregame Announcement
             </button>
-            <button class="sync-btn" onclick="resyncSpotify()" title="Spotify connection — tap to reconnect">
-                <span id="sync-dot" class="status-dot"></span>
-            </button>
+            <button class="sync-btn" onclick="openClearModal()" title="Clear played songs / empty the soundboard">🧹</button>
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
 
@@ -500,6 +513,28 @@
                 <div id="tag-chips" class="tag-chips"></div>
             </div>
             <div id="track-list" class="track-list"></div>
+        </div>
+    </div>
+
+    <div id="clear-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Clear</span>
+                <button class="modal-close" onclick="closeClearModal()">✕</button>
+            </div>
+            <div class="settings-body">
+                <p class="clear-hint">Pick one or both, then tap Clear.</p>
+                <button class="clear-opt" id="clear-opt-played" onclick="toggleClearOpt('played')">
+                    <span class="clear-box"></span>
+                    <span class="clear-text"><b>Clear the played list</b><span id="clear-played-n"></span></span>
+                </button>
+                <button class="clear-opt" id="clear-opt-board" onclick="toggleClearOpt('board')">
+                    <span class="clear-box"></span>
+                    <span class="clear-text"><b>Empty the soundboard</b><span id="clear-board-n"></span></span>
+                </button>
+                <button class="settings-btn-action clear-go" id="clear-go-btn" onclick="applyClear()" disabled>Clear</button>
+                <button class="settings-btn-action" onclick="closeClearModal()">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -1002,6 +1037,40 @@
             if (!uri) return;
             playCounts[uri] = (playCounts[uri] || 0) + 1;
             lsSet('play_counts', JSON.stringify(playCounts));
+        }
+
+        // --- CLEAR MODAL: clear the played list, empty the soundboard, or both ---
+        let clearPicks = { played: false, board: false };
+        function playedCount() { return Object.keys(playCounts).filter(k => playCounts[k] > 0).length; }
+        function queuedCount() { return Object.keys(queueState).filter(k => queueState[k]).length; }
+        function refreshClearModal() {
+            ['played', 'board'].forEach((k) => {
+                document.getElementById('clear-opt-' + k).className = 'clear-opt' + (clearPicks[k] ? ' on' : '');
+            });
+            const np = playedCount(), nb = queuedCount();
+            document.getElementById('clear-played-n').textContent = np + ' song' + (np === 1 ? '' : 's') + ' played this game';
+            document.getElementById('clear-board-n').textContent = nb + ' of ' + QUEUE_SLOTS.length + ' tiles filled';
+            document.getElementById('clear-go-btn').disabled = !(clearPicks.played || clearPicks.board);
+        }
+        function openClearModal() {
+            clearPicks = { played: false, board: false };
+            refreshClearModal();
+            document.getElementById('clear-modal').style.display = 'flex';
+        }
+        function closeClearModal() { document.getElementById('clear-modal').style.display = 'none'; }
+        function toggleClearOpt(k) { clearPicks[k] = !clearPicks[k]; refreshClearModal(); }
+        function applyClear() {
+            if (clearPicks.played) {
+                playCounts = {};
+                lsSet('play_counts', JSON.stringify(playCounts));
+            }
+            if (clearPicks.board) {
+                queueState = {};
+                activeSlotId = null;
+                saveQueue();
+                renderQueue();
+            }
+            closeClearModal();
         }
 
         function resetPlayCounts() {
