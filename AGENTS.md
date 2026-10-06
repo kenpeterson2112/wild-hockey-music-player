@@ -67,3 +67,6 @@ your change, pull the latest `main`, and redo the edit on that.
   (for example: `Add 3 songs: YYZ, Vogue, September`).
 - Don't edit files in `scripts/`, `tests/`, `docs/`, or `audio/`, or the
   workflow and settings files, as part of a song update.
+- Leave `wild-hockey-songs.xlsx` alone. It's a binary file that Claude
+  regenerates with `scripts/export_songs_xlsx.py` as part of its PRs, so it
+  can lag a few songs behind; that's expected.
