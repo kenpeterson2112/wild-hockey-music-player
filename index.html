@@ -298,7 +298,8 @@
             flex: 1 1 auto;
             min-height: 0;
         }
-        .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; }
+        .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+        .picker-filters .tag-chips { flex: 1 1 auto; min-width: 0; }
         /* Two rows of chips that still slide sideways; the most-used tags fill the first columns */
         .tag-chips {
             display: grid; grid-template-rows: repeat(2, auto); grid-auto-flow: column; grid-auto-columns: max-content;
@@ -310,7 +311,9 @@
             box-shadow: none;
         }
         .chip .chip-n { opacity: 0.6; font-weight: 500; margin-left: 4px; }
-        .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; grid-row: span 2; align-self: center; }
+        .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; margin-bottom: 8px; }
+        /* The clear button keeps its spot on the right even when hidden, so chips never shift */
+        .chip-clear.off { visibility: hidden; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
            Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
@@ -519,6 +522,7 @@
             </div>
             <div class="picker-filters">
                 <div id="tag-chips" class="tag-chips"></div>
+                <button id="chip-clear-btn" class="chip chip-clear off" title="Clear tag filters">✕</button>
             </div>
             <div id="track-list" class="track-list"></div>
         </div>
@@ -1657,7 +1661,7 @@
         function renderSongPicker() {
             const songs = buildSongList();
 
-            // --- tag chips: ✕ (only while filtering), then every tag, the ones on the most songs first
+            // --- tag chips: every tag, the ones on the most songs first (✕ on the right while filtering)
             const counts = new Map(); // tag id -> number of songs
             const names = new Map();  // tag id -> display name
             songs.forEach(sg => sg.tags.forEach((disp, id) => {
@@ -1677,14 +1681,10 @@
                 b.onclick = onClick;
                 return b;
             };
-            if (pickerTags.size) {
-                const x = document.createElement('button');
-                x.className = 'chip chip-clear';
-                x.textContent = '✕';
-                x.title = 'Clear tag filters';
-                x.onclick = () => toggleTag(null);
-                chips.appendChild(x);
-            }
+            // ✕ sits to the right of the chips and only shows while filtering
+            const clearBtn = document.getElementById('chip-clear-btn');
+            clearBtn.className = 'chip chip-clear' + (pickerTags.size ? '' : ' off');
+            clearBtn.onclick = () => toggleTag(null);
             chipTags.forEach(t => chips.appendChild(makeChip(names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t), tagColorClass(t))));
 
             // --- filter, then split into three groups (a song is in exactly one):
