@@ -161,5 +161,32 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   const names=run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').map(r=>r.children[0].children[0].textContent)");
   check('queued song is in the queued group, the rest still listed', run("document.getElementById('track-list').children.some(r=>r.className==='list-divider')") && names.length===run('window.SONGS.length'));
 }
+// ================= Clear (🧹) button and modal
+{ const A='spotify:track:AAAAAAAAAAAAAAAAAAAAA1';
+  { const {gid,run}=makeEnv();
+    check('broom dimmed with nothing to clear', gid('clear-btn').disabled===true);
+    run('openClearModal()'); check('dimmed broom does not open the modal', gid('clear-modal').style.display!=='flex');
+    run(`incrementPlayCount('${A}')`); check('broom wakes up once a song is played', gid('clear-btn').disabled===false);
+  }
+  { const {gid,run,store}=makeEnv({play_counts:JSON.stringify({[A]:2}),queue_slots:JSON.stringify({w1:{uri:A,name:'A'},gf:{uri:'spotify:track:BBBBBBBBBBBBBBBBBBBBB1',name:'B'}})});
+    check('broom active at startup when there is something to clear', gid('clear-btn').disabled===false);
+    run('openClearModal()');
+    check('modal: both options live', gid('clear-modal').style.display==='flex' && !gid('clear-opt-played').disabled && !gid('clear-opt-board').disabled);
+    check('modal: counts shown', gid('clear-played-n').textContent==='1 song played this game' && gid('clear-board-n').textContent==='2 of 8 tiles filled', gid('clear-board-n').textContent);
+    gid('clear-opt-played').onclick ? gid('clear-opt-played').onclick() : run("applyClear('played')");
+    check('tapping played clears it at once, modal stays open', store.get('play_counts')==='{}' && gid('clear-modal').style.display==='flex');
+    check('played option now dimmed with 0 count', gid('clear-opt-played').disabled===true && gid('clear-played-n').textContent==='0 songs played this game');
+    check('soundboard untouched', Object.keys(JSON.parse(store.get('queue_slots'))).length===2);
+    run("applyClear('board')");
+    check('last thing cleared: soundboard empty and modal closes itself', store.get('queue_slots')==='{}' && gid('clear-modal').style.display==='none');
+    check('broom dims again', gid('clear-btn').disabled===true);
+  }
+  { const {gid,run}=makeEnv({queue_slots:JSON.stringify({w1:{uri:A,name:'A'}})});
+    run('openClearModal()');
+    check('only tiles filled: played option dimmed, board live', gid('clear-opt-played').disabled===true && gid('clear-opt-board').disabled===false);
+    run('resetPlayCounts()'); check('Settings reset play counter keeps broom live while tiles remain', gid('clear-btn').disabled===false);
+  }
+}
+
 console.log(`\n${ok} passed, ${bad} failed`);
 if (bad) process.exit(1);
