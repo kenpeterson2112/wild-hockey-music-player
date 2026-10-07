@@ -318,7 +318,7 @@
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
            Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
-           navy, green and white).
+           navy, green and white, Intensity hot pink with black text).
            Other tags stay neutral. */
         .tc-green  { --tc: #1DB954; }
         .tc-red    { --tc: #e0455e; }
@@ -327,6 +327,7 @@
         .tc-orange { --tc: #fb7139; }
         .tc-purple { --tc: #a855f7; }
         .tc-wild   { --tc: #22c55e; }
+        .tc-pink   { --tc: #ff2d95; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
         .tag-pills { display: flex; flex-wrap: nowrap; gap: 5px; flex-shrink: 0; }
@@ -338,6 +339,9 @@
         /* Wild: team colours from the West Northumberland Wild logo (navy, bright green, white) */
         .chip.tc-wild, .tag-pill.tc-wild { background: #13295e; border-color: #22c55e; color: #fff; }
         .chip.tc-wild.active { background: #1fae4b; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #13295e; }
+        /* Intensity: solid hot pink pill with black text */
+        .tag-pill.tc-pink { background: #ff2d95; border-color: #ff2d95; color: #000; }
+        .chip.tc-pink.active { color: #000; }
         .list-divider {
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
@@ -672,7 +676,7 @@
             { uri: 'spotify:track:6JymsaWDHk2Yj4e0yNBIFH', name: 'Jump Around' },
             { uri: 'spotify:track:5AEs83CYoPApEjYEJGbTuJ', name: 'Party Till We Die' },
             { uri: 'spotify:track:4r8lRYnoOGdEi6YyI5OC1o', name: 'Bye Bye Bye', startSec: 54 },
-            { uri: 'spotify:track:7ACxUo21jtTHzy7ZEV56vU', name: 'Crazy Train', tags: ['End Game'] },
+            { uri: 'spotify:track:7ACxUo21jtTHzy7ZEV56vU', name: 'Crazy Train', tags: ['Power Play', 'End Game'] },
             { uri: 'spotify:track:2HHtWyy5CgaQbC7XSoOb0e', name: 'Eye of the Tiger', tags: ['End Game'] },
             { uri: 'spotify:track:2tUBqZG2AbRi7Q0BIrVrEj', name: 'I Wanna Dance with Somebody', startSec: 60 },
             { uri: 'spotify:track:6nFYXpBgrNcZjbtNEuc6yR', name: 'I Am Your Gummy Bear', startSec: 37 },
@@ -701,7 +705,7 @@
             { uri: 'spotify:track:1ZipIhmm5baGBobKoAFWHE', name: 'Kickstart my Heart', startSec: 63 },
             { uri: 'spotify:track:3pv7Q5v2dpdefwdWIvE7yH', name: 'Shake it Off', startSec: 41 },
             { uri: 'spotify:track:5X79VgaOn8pDTpTKu3PixN', name: "We're not gonna take it", startSec: 46 },
-            { uri: 'spotify:track:4Y7XAxTANhu3lmnLAzhWJW', name: 'Fireball', startSec: 92 },
+            { uri: 'spotify:track:4Y7XAxTANhu3lmnLAzhWJW', name: 'Fireball', startSec: 92, tags: ['Power Play'] },
             { uri: 'spotify:track:4svZDCRz4cJoneBpjpx8DJ', name: 'I Did Something Bad', startSec: 44 },
             { uri: 'spotify:track:1ibRqifchaAfeNdQGpbRVW', name: 'Bad Girls', startSec: 93 },
             { uri: 'spotify:track:3MrRksHupTVEQ7YbA0FsZK', name: 'Final Countdown', startSec: 248 },
@@ -720,7 +724,7 @@
             { uri: 'spotify:track:0KAaslGdPc5I6WxmKe3whe', name: 'Hangar 18', startSec: 46, tags: ['End Game'] },
             { uri: 'spotify:track:1W1Fchq0voTFhKGWmn57uW', name: 'The Trooper', tags: ['End Game'] },
             { uri: 'spotify:track:1aDNYyeU62BuQsBAY18i48', name: 'Stargazer', startSec: 8 },
-            { uri: 'spotify:track:5DrNFzZZZVfXaEZCaceKnp', name: 'Seek & Destroy', tags: ['End Game'] },
+            { uri: 'spotify:track:5DrNFzZZZVfXaEZCaceKnp', name: 'Seek & Destroy', tags: ['Power Play', 'End Game'] },
             { uri: 'spotify:track:1W5XugQJGhnSATMI5n002M', name: 'Idioteque', startSec: 244 },
             { uri: 'spotify:track:45DElIx0dXqUH4A88yQFdE', name: 'Go With the Flow' },
             { uri: 'spotify:track:2YodwKJnbPyNKe8XXSE9V7', name: 'Lithium', startSec: 34 },
@@ -729,8 +733,8 @@
             { uri: 'spotify:track:3frf3zTgzt3YIx9ylpUoqU', name: 'Misty Mountain Hop' },
             { uri: 'spotify:track:3cZajhyr8LmtPfHZ9296tj', name: 'No Broke Boys', startSec: 30 },
             { uri: 'spotify:track:7gfcVjQLq4lKObJD6dU7r7', name: 'Goal horn', tags: ['Goal For'] },
-            { uri: 'spotify:track:0bz67HYKfiuUj1xhsK5ofT', name: 'crowd chant', startSec: 24, tags: ['Goal For'] },
-            { uri: 'spotify:track:6UA5wCnNHbPZzT1O0tWQy0', name: '50 mission Cap' },
+            { uri: 'spotify:track:0bz67HYKfiuUj1xhsK5ofT', name: 'crowd chant', startSec: 24, tags: ['Power Play', 'Goal For'] },
+            { uri: 'spotify:track:6UA5wCnNHbPZzT1O0tWQy0', name: '50 mission Cap', tags: ['Power Play'] },
             { uri: 'spotify:track:4f3RDq9nYPBeR1yMSgnmBm', name: "you've got another thing coming" }
         ];
     </script>
@@ -1146,7 +1150,7 @@
             pregame: 'Pregame'
         };
         const NO_TAG_WORDS = ['whistles', 'betweenwhistles', 'whistle', 'none', 'untagged'];
-        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild'];
+        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intensity'];
 
         function compactTag(raw) { return String(raw == null ? '' : raw).toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
@@ -1160,7 +1164,7 @@
         }
         function tagId(display) { return String(display).toLowerCase(); }
         // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
-        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild' };
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intensity': 'pink' };
         function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)

@@ -46,6 +46,7 @@ CATEGORY_STYLE = {
     "endGame": ("🔥", "#fb7139"),
     "puckDrop": ("🏒", "#a855f7"),
     "wild": ("🌲", "#22c55e"),
+    "intensity": ("⚡", "#ff2d95"),
 }
 
 PAGE = """<!DOCTYPE html>
