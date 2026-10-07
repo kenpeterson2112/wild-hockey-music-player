@@ -328,7 +328,7 @@
         .tc-wild   { --tc: #22c55e; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
-        .tag-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+        .tag-pills { display: flex; flex-wrap: nowrap; gap: 5px; flex-shrink: 0; }
         .tag-pill {
             font-size: 0.7rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px;
             color: var(--tc, #8a8f9c); border: 1px solid var(--tc, #8a8f9c);
@@ -362,13 +362,19 @@
             border-color: #1DB954;
             transform: scale(0.98);
         }
-        .track-info { min-width: 0; }
-        .track-name { font-weight: 700; font-size: 1.05rem; }
+        /* Every song row is the same height: name and tag pills share one line (long
+           names get an ellipsis) and the detail line is always there, even if empty. */
+        .track-info { min-width: 0; flex: 1 1 auto; }
+        .track-title { display: flex; align-items: center; gap: 8px; min-width: 0; height: 22px; }
+        .track-name {
+            font-weight: 700; font-size: 1.05rem; min-width: 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
         .track-uri {
             font-size: 0.8rem;
             color: #8a8f9c;
             font-family: monospace;
-            word-break: break-all;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             margin-top: 4px;
         }
         .play-count {
@@ -1741,21 +1747,24 @@
                 const info = document.createElement('div');
                 info.className = 'track-info';
 
+                // Name and tag pills share the top line
+                const titleRow = document.createElement('div');
+                titleRow.className = 'track-title';
                 const nameEl = document.createElement('div');
                 nameEl.className = 'track-name';
                 nameEl.textContent = name;
-                info.appendChild(nameEl);
+                titleRow.appendChild(nameEl);
+                info.appendChild(titleRow);
 
                 const subParts = [];
                 if (queuedBy.has(uri)) subParts.push('In ' + queuedBy.get(uri).join(' + '));
                 if (song.inCustom && !song.inRepo) subParts.push('Custom');
                 if (startMs > 0) subParts.push(`starts at ${startSec}s`);
-                if (subParts.length) {
-                    const subEl = document.createElement('div');
-                    subEl.className = 'track-uri';
-                    subEl.textContent = subParts.join(' · ');
-                    info.appendChild(subEl);
-                }
+                // Always add the detail line (blank when there's nothing to say) so rows match
+                const subEl = document.createElement('div');
+                subEl.className = 'track-uri';
+                subEl.textContent = subParts.length ? subParts.join(' · ') : '\u00a0';
+                info.appendChild(subEl);
                 if (song.tags.size) {
                     const pills = document.createElement('div');
                     pills.className = 'tag-pills';
@@ -1765,7 +1774,7 @@
                         pill.textContent = disp;
                         pills.appendChild(pill);
                     });
-                    info.appendChild(pills);
+                    titleRow.appendChild(pills);
                 }
                 item.appendChild(info);
 
