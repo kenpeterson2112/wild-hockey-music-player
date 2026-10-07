@@ -39,13 +39,13 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   check('chips: no All chip, no X yet, tags by song count', chips.join(' | ')===byCount.map(t=>t+counts.get(t)).join(' | '), chips.join(' | '));
   check('no Between Whistles chip', !chips.some(c=>/whistle/i.test(c)));
   const rows=()=>run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').length");
-  const hasX=()=>{const c=run("document.getElementById('tag-chips').children"); return c.length>0 && c[0].className.includes('chip-clear');};
+  const hasX=()=>!run("document.getElementById('chip-clear-btn').className").includes('off');
   const tap=(label)=>run("document.getElementById('tag-chips').children").find(b=>b.className.includes('chip') && !b.className.includes('chip-clear') && chipTxt(b)===label+counts.get(label)).onclick();
   const anyOf=ts=>repo.filter(s=>(s.tags||[]).some(t=>ts.includes(t))).length;
   check('everything shown by default', rows()===N);
   if (byCount.length) {
     const [t1,t2]=byCount;
-    tap(t1); check('first chip = single filter + X appears', rows()===counts.get(t1) && hasX(), rows());
+    tap(t1); check('first chip = single filter + X shows on the right', rows()===counts.get(t1) && hasX(), rows());
     if (byCount.length>2) { // with exactly 2 tags, picking both = every tag = everything (checked below)
       tap(t2); check('second chip adds (any of)', rows()===anyOf([t1,t2]), rows());
       tap(t1); check('deselect one keeps the other', rows()===counts.get(t2));
@@ -56,7 +56,7 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
       byCount.slice(0,-1).forEach(tap); check('all but one tag still filtering', rows()===anyOf(byCount.slice(0,-1)) && hasX(), rows());
       tap(byCount[byCount.length-1]); check('every tag selected = everything, X gone', rows()===N && !hasX());
     }
-    tap(t1); run("document.getElementById('tag-chips').children[0].onclick()"); check('X clears selection', rows()===N && !hasX());
+    tap(t1); run("document.getElementById('chip-clear-btn').onclick()"); check('X clears selection', rows()===N && !hasX());
   }
 }
 
