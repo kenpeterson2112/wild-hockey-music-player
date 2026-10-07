@@ -45,7 +45,7 @@ CATEGORY_STYLE = {
     "penaltyAgainst": ("⚠️", "#f59e0b"),
     "endGame": ("🔥", "#fb7139"),
     "puckDrop": ("🏒", "#a855f7"),
-    "wild": ("🌲", "#DDCBA4"),
+    "wild": ("🌲", "#22c55e"),
 }
 
 PAGE = """<!DOCTYPE html>

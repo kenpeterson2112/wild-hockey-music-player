@@ -313,7 +313,8 @@
         .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; grid-row: span 2; align-self: center; }
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
-           Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild wheat).
+           Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
+           navy, green and white).
            Other tags stay neutral. */
         .tc-green  { --tc: #1DB954; }
         .tc-red    { --tc: #e0455e; }
@@ -321,7 +322,7 @@
         .tc-amber  { --tc: #f59e0b; }
         .tc-orange { --tc: #fb7139; }
         .tc-purple { --tc: #a855f7; }
-        .tc-wheat  { --tc: #DDCBA4; }
+        .tc-wild   { --tc: #22c55e; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
         .tag-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
@@ -330,6 +331,9 @@
             color: var(--tc, #8a8f9c); border: 1px solid var(--tc, #8a8f9c);
             background: #20232c; background: color-mix(in srgb, var(--tc, #8a8f9c) 16%, #20232c);
         }
+        /* Wild: team colours from the West Northumberland Wild logo (navy, bright green, white) */
+        .chip.tc-wild, .tag-pill.tc-wild { background: #13295e; border-color: #22c55e; color: #fff; }
+        .chip.tc-wild.active { background: #1fae4b; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #13295e; }
         .list-divider {
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
@@ -1140,7 +1144,7 @@
         }
         function tagId(display) { return String(display).toLowerCase(); }
         // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
-        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wheat' };
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild' };
         function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)
