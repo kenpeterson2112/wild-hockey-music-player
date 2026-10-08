@@ -77,7 +77,7 @@ def write_workbook(rows: list, output: Path) -> None:
         value=(
             "Exported from the window.SONGS block in index.html. Tags are blank for a "
             "between-whistles song. Start Time is shown as "
-            "m:ss and corresponds to the startSec value (in seconds); a blank means the "
+            "m:ss (or m:ss.s) and corresponds to the startSec value (in seconds); a blank means the "
             "track plays from the beginning."
         ),
     )

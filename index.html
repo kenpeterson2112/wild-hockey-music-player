@@ -619,7 +619,7 @@
                 <p>Paste a Spotify song link and name it. It's saved on this device and shows up in the song list. Leave the tags empty for a between-whistles song.</p>
                 <input type="text" id="custom-link-input" placeholder="Paste Spotify song link">
                 <input type="text" id="custom-name-input" placeholder="Song name">
-                <input type="text" id="custom-start-input" placeholder="Start time m:ss (optional)">
+                <input type="text" id="custom-start-input" placeholder="Start time m:ss or m:ss.s (optional)">
                 <div class="tag-picker-label">Tags (tap any that apply)</div>
                 <div id="custom-tag-chips" class="tag-picker"></div>
                 <input type="text" id="custom-newtag-input" placeholder="New tag (optional)">
@@ -1191,7 +1191,7 @@
             const name = typeof entry.name === 'string' ? entry.name.trim() : '';
             if (!uri || !name) return null;
             const out = { uri: uri, name: name };
-            if (typeof entry.startSec === 'number' && entry.startSec > 0) out.startSec = Math.round(entry.startSec);
+            if (typeof entry.startSec === 'number' && entry.startSec > 0) out.startSec = roundTenth(entry.startSec);
             const tags = splitTags(Array.isArray(entry.tags) ? entry.tags.join(';') : '');
             if (tags.length) out.tags = tags;
             return out;
@@ -1264,20 +1264,25 @@
         }
 
         // "m:ss" or "mm:ss" (or plain seconds) -> whole seconds; blank/0 -> 0
+        // Start times are kept to the tenth of a second (Spotify itself takes milliseconds)
+        function roundTenth(n) { return Math.round(n * 10) / 10; }
+
+        // 'm:ss', 'm:ss.s', or plain seconds ('92', '92.5') -> seconds to the tenth
         function parseStartTime(v) {
             if (!v) return 0;
             const s = String(v).trim();
             if (!s) return 0;
+            let total;
             if (s.indexOf(':') === -1) {
-                const n = parseInt(s, 10);
-                return isNaN(n) || n < 0 ? 0 : n;
+                total = parseFloat(s);
+            } else {
+                const parts = s.split(':');
+                const mins = parseInt(parts[0], 10);
+                const secs = parseFloat(parts[1]);
+                if (isNaN(mins) || isNaN(secs)) return 0;
+                total = mins * 60 + secs;
             }
-            const parts = s.split(':');
-            const mins = parseInt(parts[0], 10);
-            const secs = parseInt(parts[1], 10);
-            if (isNaN(mins) || isNaN(secs)) return 0;
-            const total = mins * 60 + secs;
-            return total < 0 ? 0 : total;
+            return isNaN(total) || total < 0 ? 0 : roundTenth(total);
         }
 
         // Tags offered in Add Custom Song: the standard ones plus any in use, the

@@ -12,7 +12,7 @@ Expected headers (matched loosely -- case and punctuation are ignored):
       play?            Goal Against, Power Play, Penalty Kill, End Game. Blank
                        or "Between Whistles" means no tag (a between-whistles
                        song). Old category names still work.
-    Start time         optional; m:ss or plain seconds
+    Start time         optional; m:ss, m:ss.s, or plain seconds (to the tenth)
 
 Usage:
     python scripts/import_songs_tsv.py responses.tsv

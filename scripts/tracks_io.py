@@ -12,6 +12,7 @@ and parseStartTime in index.html, so anything the app accepts is accepted here.
 """
 
 import json
+import math
 import re
 from pathlib import Path
 
@@ -108,36 +109,43 @@ def parse_spotify_uri(text):
     return None
 
 
-def parse_start_time(text):
-    """'m:ss', 'mm:ss', or plain seconds -> whole seconds. Blank/invalid -> 0.
+def tidy_seconds(value):
+    """Round to tenths of a second; whole numbers come back as int (62.0 -> 62)."""
+    # floor(x + 0.5) rounds halves up, matching Math.round in index.html
+    value = math.floor(float(value) * 10 + 0.5) / 10
+    return int(value) if value == int(value) else value
 
-    Mirrors parseStartTime in index.html.
+
+def parse_start_time(text):
+    """'m:ss', 'm:ss.s', or plain seconds ('92', '92.5') -> seconds, to the tenth.
+
+    Blank/invalid -> 0. Whole values are ints. Mirrors parseStartTime in index.html.
     """
     if text is None:
         return 0
     s = str(text).strip()
     if not s:
         return 0
-    if ":" not in s:
-        try:
-            n = int(float(s))
-        except ValueError:
-            return 0
-        return max(n, 0)
-    parts = s.split(":")
     try:
-        mins, secs = int(parts[0]), int(parts[1])
+        if ":" not in s:
+            total = float(s)
+        else:
+            parts = s.split(":")
+            total = int(parts[0]) * 60 + float(parts[1])
     except (ValueError, IndexError):
         return 0
-    return max(mins * 60 + secs, 0)
+    return tidy_seconds(total) if total > 0 else 0
 
 
 def format_start_time(start_sec):
-    """Seconds -> 'm:ss'. Blank string when the track starts at the beginning."""
+    """Seconds -> 'm:ss' or 'm:ss.s'. Blank string when the track starts at the beginning."""
     if not start_sec:
         return ""
-    seconds = int(start_sec)
-    return f"{seconds // 60}:{seconds % 60:02d}"
+    start_sec = tidy_seconds(start_sec)
+    mins, secs = divmod(start_sec, 60)
+    if isinstance(start_sec, int):
+        return f"{int(mins)}:{int(secs):02d}"
+    return f"{int(mins)}:{secs:04.1f}"
 
 
 def spotify_url(uri):
@@ -188,7 +196,7 @@ def render_songs_block(songs):
             f"name: {_js_string(entry['name'])}",
         ]
         if entry.get("startSec"):
-            parts.append(f"startSec: {int(entry['startSec'])}")
+            parts.append(f"startSec: {tidy_seconds(entry['startSec'])}")
         if entry.get("tags"):
             tag_list = ", ".join(_js_string(str(t)) for t in entry["tags"])
             parts.append(f"tags: [{tag_list}]")
