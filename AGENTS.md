@@ -34,8 +34,9 @@ Each song is one line inside `window.SONGS`:
 - `uri`: `spotify:track:` followed by the 22-character ID from the share link
   (`https://open.spotify.com/track/<ID>?si=...`). Drop the `?si=` part.
 - `name`: the title as it should appear in the app.
-- `startSec` (optional): whole seconds to skip into the song (1:32 is `92`).
-  Leave it out to start at the beginning.
+- `startSec` (optional): seconds to skip into the song (1:32 is `92`). One
+  decimal place is allowed for a finer start (1:32.5 is `92.5`). Leave it out
+  to start at the beginning.
 - `tags` (optional): a list. Leave it out for a between-whistles song.
 - Every song line ends with a comma except the last one.
 - A song must appear only once. To give it several tags, put them all in its

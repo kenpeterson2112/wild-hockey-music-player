@@ -161,6 +161,19 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   const names=run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').map(r=>r.children[0].children[0].textContent)");
   check('queued song is in the queued group, the rest still listed', run("document.getElementById('track-list').children.some(r=>r.className==='list-divider')") && names.length===run('window.SONGS.length'));
 }
+// ================= start times to the tenth of a second
+{ const {run}=makeEnv();
+  const cases=[['1:32',92],['1:32.5',92.5],['92.5',92.5],['0:08.25',8.3],['1:2.5',62.5],['',0],['abc',0],['-3',0]];
+  const got=cases.map(([v])=>run(`parseStartTime(${JSON.stringify(v)})`));
+  check('parseStartTime accepts tenths (m:ss.s and plain seconds)', cases.every(([,want],i)=>got[i]===want), JSON.stringify(got));
+}
+{ const {store,gid,run}=makeEnv();
+  gid('custom-link-input').value='spotify:track:TENTHAAAAAAAAAAAAAAAA1'; gid('custom-name-input').value='Tenth';
+  gid('custom-start-input').value='1:02.5'; run('addCustomTrack()');
+  const saved=JSON.parse(store.get('custom_songs')).find(s=>s.name==='Tenth');
+  check('Add a song keeps a fractional start time', saved && saved.startSec===62.5, JSON.stringify(saved));
+}
+
 // ================= Clear (🧹) button and modal
 { const A='spotify:track:AAAAAAAAAAAAAAAAAAAAA1';
   { const {gid,run}=makeEnv();

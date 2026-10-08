@@ -95,7 +95,8 @@ anyway.
 
 Links may be a share link (with or without a `?si=` suffix), a
 `spotify:track:...` URI, or a bare 22-character track ID. Start times may be
-`m:ss` or plain seconds. These are the same rules the app itself uses for
+`m:ss` or plain seconds, with one optional decimal place for a finer start
+(`1:32.5` or `92.5`). These are the same rules the app itself uses for
 on-device custom songs.
 
 Before writing, the importer re-parses the block it is about to save and

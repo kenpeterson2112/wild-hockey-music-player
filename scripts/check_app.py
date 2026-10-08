@@ -64,8 +64,14 @@ def check_songs(html, errors, warnings):
         if not str(s.get("name", "")).strip():
             errors.append(f"{label}: blank name")
         start = s.get("startSec")
-        if start is not None and (not isinstance(start, int) or start < 0 or start > 900):
-            errors.append(f"{label}: startSec should be whole seconds between 0 and 900, got {start!r}")
+        ok_number = isinstance(start, (int, float)) and not isinstance(start, bool)
+        if start is not None and (
+            not ok_number or start < 0 or start > 900 or round(start * 10) != start * 10
+        ):
+            errors.append(
+                f"{label}: startSec should be seconds between 0 and 900, "
+                f"at most one decimal place (62 or 62.5), got {start!r}"
+            )
         tags = s.get("tags", [])
         if not isinstance(tags, list):
             errors.append(f"{label}: tags must be a list like ['Goal For']")
