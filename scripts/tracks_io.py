@@ -21,7 +21,7 @@ INDEX_HTML = REPO_ROOT / "index.html"
 
 # The tags the app and these scripts know by name, in the order they are shown.
 # Any other tag a song carries is kept and shown too.
-TAG_ORDER = ["Power Play", "Goal For", "Goal Against", "Penalty Kill", "End Game", "Puck Drop", "Wild", "Intensity"]
+TAG_ORDER = ["Power Play", "Goal For", "Goal Against", "Penalty Kill", "End Game", "Puck Drop", "Wild", "Intensity", "Halloween"]
 
 # Old spellings and category names -> the tag they mean. Keys are compact
 # (lowercase letters and digits only), so "Goal FOR", "goalFor" and "goal for"
@@ -239,6 +239,7 @@ SECTION_LABELS = {
     "endGame": "End Game",
     "wild": "Wild",
     "intensity": "Intensity",
+    "halloween": "Halloween",
 }
 TAG_TO_SECTION = {
     "Power Play": "penaltyFor",
@@ -249,4 +250,5 @@ TAG_TO_SECTION = {
     "Puck Drop": "puckDrop",
     "Wild": "wild",
     "Intensity": "intensity",
+    "Halloween": "halloween",
 }

@@ -331,6 +331,7 @@
         .tc-purple { --tc: #a855f7; }
         .tc-wild   { --tc: #22c55e; }
         .tc-pink   { --tc: #ff2d95; }
+        .tc-pumpkin { --tc: #fb7139; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
         .tag-pills { display: flex; flex-wrap: nowrap; gap: 5px; flex-shrink: 0; }
@@ -346,6 +347,11 @@
         /* Intensity: solid hot pink pill with black text */
         .tag-pill.tc-pink { background: #ff2d95; border-color: #ff2d95; color: #000; }
         .chip.tc-pink.active { color: #000; }
+        /* Halloween: just a 🎃 on a black chip; an orange ring shows it's selected */
+        .chip.tc-pumpkin, .tag-pill.tc-pumpkin { background: #000; border-color: #3a3a3a; color: #fff; }
+        .tag-chips .chip.tc-pumpkin { justify-self: start; }
+        .chip.tc-pumpkin.active { background: #000; border-color: #fb7139; color: #fff; box-shadow: 0 0 0 2px #fb7139; }
+        .tag-pill.tc-pumpkin { font-size: 0.8rem; padding: 2px 8px; }
         .list-divider {
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
@@ -1159,7 +1165,7 @@
             pregame: 'Pregame'
         };
         const NO_TAG_WORDS = ['whistles', 'betweenwhistles', 'whistle', 'none', 'untagged'];
-        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intensity'];
+        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intensity', 'Halloween'];
 
         function compactTag(raw) { return String(raw == null ? '' : raw).toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
@@ -1173,11 +1179,13 @@
         }
         function tagId(display) { return String(display).toLowerCase(); }
         // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
-        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intensity': 'pink' };
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intensity': 'pink', 'halloween': 'pumpkin' };
         // Short codes for the song-row pills (filter chips keep the full names, and act
         // as the colour legend). Tags without a code show their full name.
         const TAG_SHORT = { 'goal for': 'GF', 'goal against': 'GA', 'power play': 'PP', 'penalty kill': 'PK',
-            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intensity': 'INT' };
+            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intensity': 'INT', 'halloween': '🎃' };
+        // Tags whose chips show a symbol instead of their name (the name is the tooltip)
+        const TAG_LABEL = { 'halloween': '🎃' };
         function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)
@@ -1316,7 +1324,8 @@
             allTagsByCount().forEach((t) => {
                 const b = document.createElement('button');
                 b.className = 'chip' + tagColorClass(t.id) + (addFormTags.has(t.id) ? ' active' : '');
-                b.textContent = t.name;
+                b.textContent = TAG_LABEL[t.id] || t.name;
+                b.title = t.name;
                 b.onclick = () => {
                     if (addFormTags.has(t.id)) addFormTags.delete(t.id); else addFormTags.set(t.id, t.name);
                     renderAddTagChips();
@@ -1719,7 +1728,7 @@
             const clearBtn = document.getElementById('chip-clear-btn');
             clearBtn.className = 'chip chip-clear' + (pickerTags.size ? '' : ' off');
             clearBtn.onclick = () => toggleTag(null);
-            chipTags.forEach(t => chips.appendChild(makeChip(names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t), tagColorClass(t))));
+            chipTags.forEach(t => chips.appendChild(makeChip(TAG_LABEL[t] || names.get(t), counts.get(t) || 0, pickerTags.has(t), () => toggleTag(t), tagColorClass(t))));
 
             // --- filter, then split into three groups (a song is in exactly one):
             //   available -> not queued and not played yet (top, no heading)

@@ -36,11 +36,12 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
 
   run("openTrackSelector('Choose: Whistle 1')");
   const chips=run("document.getElementById('tag-chips').children").map(chipTxt);
-  check('chips: no All chip, no X yet, tags by song count', chips.join(' | ')===byCount.map(t=>t+counts.get(t)).join(' | '), chips.join(' | '));
+  const LBL1=run('TAG_LABEL'); const shown=t=>LBL1[t.toLowerCase()]||t;
+  check('chips: no All chip, no X yet, tags by song count', chips.join(' | ')===byCount.map(t=>shown(t)+counts.get(t)).join(' | '), chips.join(' | '));
   check('no Between Whistles chip', !chips.some(c=>/whistle/i.test(c)));
   const rows=()=>run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').length");
   const hasX=()=>!run("document.getElementById('chip-clear-btn').className").includes('off');
-  const tap=(label)=>run("document.getElementById('tag-chips').children").find(b=>b.className.includes('chip') && !b.className.includes('chip-clear') && chipTxt(b)===label+counts.get(label)).onclick();
+  const tap=(label)=>run("document.getElementById('tag-chips').children").find(b=>b.className.includes('chip') && !b.className.includes('chip-clear') && chipTxt(b)===shown(label)+counts.get(label)).onclick();
   const anyOf=ts=>repo.filter(s=>(s.tags||[]).some(t=>ts.includes(t))).length;
   check('everything shown by default', rows()===N);
   if (byCount.length) {
@@ -88,7 +89,7 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   run('renderAddTagChips()');
   const offered=gid('custom-tag-chips').children.map(b=>b.textContent);
   const dc=new Map(run('DEFAULT_TAGS').map(t=>[t,0])); run('window.SONGS').forEach(x=>(x.tags||[]).forEach(t=>dc.set(t,(dc.get(t)||0)+1)));
-  const expectOffered=[...dc.keys()].sort((a,b)=>(dc.get(b)-dc.get(a))||a.localeCompare(b));
+  const LBL=run('TAG_LABEL'); const expectOffered=[...dc.keys()].sort((a,b)=>(dc.get(b)-dc.get(a))||a.localeCompare(b)).map(t=>LBL[t.toLowerCase()]||t);
   check('form offers every tag, most songs first', offered.join(',')===expectOffered.join(','), offered.join(','));
   // select two chips + a new tag, set link/name/start
   gid('custom-tag-chips').children.find(b=>b.textContent==='Goal For').onclick();
