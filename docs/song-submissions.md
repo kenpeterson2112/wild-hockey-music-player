@@ -29,6 +29,7 @@ End Game
 Puck Drop
 Wild
 Intensity
+Halloween
 ```
 
 A song with nothing ticked is a between-whistles song. The importer also reads
@@ -40,7 +41,7 @@ per-option help text:
 
 > Goal For = we scored. Goal Against = they scored. Power Play = they're in the
 > box. Penalty Kill = we're in the box. Puck Drop = before the puck drops.
-> Wild = songs with "wild" in the title. Intensity = high-energy songs. Leave blank for a song that fits any stoppage.
+> Wild = songs with "wild" in the title. Intensity = high-energy songs. Halloween = for the Halloween game. Leave blank for a song that fits any stoppage.
 
 **Question 2 validation** — Response validation → Regular expression →
 *Contains*:

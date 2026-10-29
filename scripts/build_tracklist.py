@@ -47,6 +47,7 @@ CATEGORY_STYLE = {
     "puckDrop": ("🏒", "#a855f7"),
     "wild": ("🌲", "#22c55e"),
     "intensity": ("⚡", "#ff2d95"),
+    "halloween": ("🎃", "#fb7139"),
 }
 
 PAGE = """<!DOCTYPE html>
