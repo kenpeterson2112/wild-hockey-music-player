@@ -159,6 +159,7 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   check('tiles use the new spellings', run('QUEUE_SLOTS.map(s=>s.label).join(",")')==='Whistle 1,Whistle 2,Whistle 3,Whistle 4,Goal For,Goal Against,Power Play,Penalty Kill');
   run("editSlot('pp')");
   check('a tile opens the picker with its title', gid('track-modal-title').textContent==='Choose: Power Play');
+  run("closeTrackSelector()"); run("editSlot('w2')"); // whistle tile: full list, so the queued group is visible
   const names=run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').map(r=>r.children[0].children[0].textContent)");
   check('queued song is in the queued group, the rest still listed', run("document.getElementById('track-list').children.some(r=>r.className==='list-divider')") && names.length===run('window.SONGS.length'));
 }
@@ -173,6 +174,20 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   gid('custom-start-input').value='1:02.5'; run('addCustomTrack()');
   const saved=JSON.parse(store.get('custom_songs')).find(s=>s.name==='Tenth');
   check('Add a song keeps a fractional start time', saved && saved.startSec===62.5, JSON.stringify(saved));
+}
+
+// ================= situation tiles open pre-filtered to their tag
+{ const {gid,run}=makeEnv();
+  const rows=()=>run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').length");
+  const n=tg=>run(`window.SONGS.filter(s=>(s.tags||[]).includes('${tg}')).length`);
+  run("editSlot('w1')"); check('whistle tile opens the full list', rows()===run('window.SONGS.length') && run('pickerTags.size')===0);
+  run("closeTrackSelector()");
+  for (const [id,tg] of [['gf','Goal For'],['ga','Goal Against'],['pp','Power Play'],['pk','Penalty Kill']]) {
+    run(`editSlot('${id}')`);
+    const want=n(tg);
+    check(`${tg} tile opens filtered to ${tg}`, want ? (rows()===want && run(`pickerTags.has('${tg.toLowerCase()}')`)) : rows()===run('window.SONGS.length'), rows()+' vs '+want);
+    run("closeTrackSelector()");
+  }
 }
 
 // ================= Clear (🧹) button and modal
