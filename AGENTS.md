@@ -45,7 +45,7 @@ Each song is one line inside `window.SONGS`:
 ### Tags (exact spelling and capitals)
 
 `Power Play`, `Goal For`, `Goal Against`, `Penalty Kill`, `End Game`,
-`Puck Drop`, `Wild`, `Intermission`, `Halloween`
+`Puck Drop`, `Wild`, `Intermission`, `Halloween`, `Banger`
 (Halloween shows in the app as just a 🎃 and Intermission as INT; always type
 the full name, e.g. `Halloween`, `Intermission`)
 
