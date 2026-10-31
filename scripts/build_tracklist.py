@@ -48,6 +48,7 @@ CATEGORY_STYLE = {
     "wild": ("🌲", "#22c55e"),
     "intermission": ("⏸️", "#e0455e"),
     "halloween": ("🎃", "#fb7139"),
+    "banger": ("💥", "#22d3ee"),
 }
 
 PAGE = """<!DOCTYPE html>
