@@ -321,7 +321,7 @@
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
            Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
-           navy, green and white, Intensity hot pink with black text).
+           navy, green and white, Intermission red, white and blue).
            Other tags stay neutral. */
         .tc-green  { --tc: #1DB954; }
         .tc-red    { --tc: #e0455e; }
@@ -330,7 +330,7 @@
         .tc-orange { --tc: #fb7139; }
         .tc-purple { --tc: #a855f7; }
         .tc-wild   { --tc: #22c55e; }
-        .tc-pink   { --tc: #ff2d95; }
+        .tc-rwb    { --tc: #e0455e; }
         .tc-pumpkin { --tc: #fb7139; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
@@ -344,12 +344,13 @@
         /* Wild: team colours from the West Northumberland Wild logo (navy, bright green, white) */
         .chip.tc-wild, .tag-pill.tc-wild { background: #13295e; border-color: #22c55e; color: #fff; }
         .chip.tc-wild.active { background: #1fae4b; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #13295e; }
-        /* Intensity: solid hot pink pill with black text */
-        .tag-pill.tc-pink { background: #ff2d95; border-color: #ff2d95; color: #000; }
-        .chip.tc-pink.active { color: #000; }
+        /* Intermission (INT): red, white and blue. Blue with a red outline and white text;
+           selected turns red with a white outline and a blue ring */
+        .chip.tc-rwb, .tag-pill.tc-rwb { background: #1e3a8a; border-color: #e0455e; color: #fff; }
+        .chip.tc-rwb.active { background: #e0455e; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #1e3a8a; }
         /* Halloween: just a 🎃 on a black chip; an orange ring shows it's selected */
         .chip.tc-pumpkin, .tag-pill.tc-pumpkin { background: #000; border-color: #3a3a3a; color: #fff; }
-        .tag-chips .chip.tc-pumpkin { justify-self: start; }
+        .tag-chips .chip.tc-pumpkin { text-align: center; }
         .chip.tc-pumpkin.active { background: #000; border-color: #fb7139; color: #fff; box-shadow: 0 0 0 2px #fb7139; }
         .tag-pill.tc-pumpkin { font-size: 0.8rem; padding: 2px 8px; }
         .list-divider {
@@ -751,18 +752,18 @@
             { uri: 'spotify:track:0DwJLxFUEBGr6jyIBaymlF', name: 'I Run', startSec: 28 },
             { uri: 'spotify:track:37ZJ0p5Jm13JPevGcx4SkF', name: "Livin' On A Prayer", startSec: 93 },
             { uri: 'spotify:track:49wOjOkS4pBK3PQnPnNYjb', name: 'Zombie', startSec: 186 },
-            { uri: 'spotify:track:3BovdzfaX4jb5KFQwoPfAw', name: 'Beat It', tags: ['Halloween'] },
-            { uri: 'spotify:track:2LlQb7Uoj1kKyGhlkBf9aC', name: 'Thriller', tags: ['Halloween'] },
-            { uri: 'spotify:track:0xxZY5C9xxij3D1HkzbnfC', name: 'Monster Mash', tags: ['Halloween'] },
-            { uri: 'spotify:track:5adNBXEoLla10lGJcGzRIL', name: 'Dracula', tags: ['Halloween'] },
-            { uri: 'spotify:track:7jwQlYGpOml9ETGre1HqGA', name: "Somebody's Watching Me", tags: ['Halloween'] },
-            { uri: 'spotify:track:23V08GxMeaZNSf8Gy6KF6t', name: 'Spooky Scary Skeletons', tags: ['Halloween'] },
-            { uri: 'spotify:track:1n8NKQRg8LVHy7oUhUgbFF', name: "Hedwig's Theme", tags: ['Halloween'] },
+            { uri: 'spotify:track:3BovdzfaX4jb5KFQwoPfAw', name: 'Beat It', startSec: 62, tags: ['Halloween'] },
+            { uri: 'spotify:track:2LlQb7Uoj1kKyGhlkBf9aC', name: 'Thriller', startSec: 36, tags: ['Halloween'] },
+            { uri: 'spotify:track:0xxZY5C9xxij3D1HkzbnfC', name: 'Monster Mash', startSec: 56, tags: ['Halloween'] },
+            { uri: 'spotify:track:5adNBXEoLla10lGJcGzRIL', name: 'Dracula', startSec: 160, tags: ['Halloween'] },
+            { uri: 'spotify:track:7jwQlYGpOml9ETGre1HqGA', name: "Somebody's Watching Me", startSec: 96, tags: ['Halloween'] },
+            { uri: 'spotify:track:2CfCbFpHnL3BYuV3VaY8Pl', name: 'Spooky Scary Skeletons', startSec: 7, tags: ['Halloween'] },
+            { uri: 'spotify:track:1n8NKQRg8LVHy7oUhUgbFF', name: "Hedwig's Theme", startSec: 78, tags: ['Halloween'] },
             { uri: 'spotify:track:569uHYIB0X324FZOBEhvit', name: 'Ghostbusters', tags: ['Halloween'] },
-            { uri: 'spotify:track:3mhsDyQpX2L8sJMdWUHOi3', name: 'This Is Halloween', tags: ['Halloween'] },
+            { uri: 'spotify:track:3mhsDyQpX2L8sJMdWUHOi3', name: 'This Is Halloween', startSec: 111.2, tags: ['Halloween'] },
             { uri: 'spotify:track:00oHVAstyM08Q82e2XYvkS', name: 'The Addams Family', tags: ['Halloween'] },
-            { uri: 'spotify:track:7swocJUCUWTCiRUAU9oerC', name: 'Halloween Theme', tags: ['Halloween'] },
-            { uri: 'spotify:track:2bCQHF9gdG5BNDVuEIEnNk', name: 'Smooth Criminal', tags: ['Halloween'] }
+            { uri: 'spotify:track:7swocJUCUWTCiRUAU9oerC', name: 'Halloween Theme', startSec: 79.9, tags: ['Halloween'] },
+            { uri: 'spotify:track:2bCQHF9gdG5BNDVuEIEnNk', name: 'Smooth Criminal', startSec: 91.5, tags: ['Halloween'] }
         ];
     </script>
 
@@ -1177,7 +1178,7 @@
             pregame: 'Pregame'
         };
         const NO_TAG_WORDS = ['whistles', 'betweenwhistles', 'whistle', 'none', 'untagged'];
-        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intensity', 'Halloween'];
+        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intermission', 'Halloween'];
 
         function compactTag(raw) { return String(raw == null ? '' : raw).toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
@@ -1191,13 +1192,13 @@
         }
         function tagId(display) { return String(display).toLowerCase(); }
         // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
-        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intensity': 'pink', 'halloween': 'pumpkin' };
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intermission': 'rwb', 'halloween': 'pumpkin' };
         // Short codes for the song-row pills (filter chips keep the full names, and act
         // as the colour legend). Tags without a code show their full name.
         const TAG_SHORT = { 'goal for': 'GF', 'goal against': 'GA', 'power play': 'PP', 'penalty kill': 'PK',
-            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intensity': 'INT', 'halloween': '🎃' };
+            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intermission': 'INT', 'halloween': '🎃' };
         // Tags whose chips show a symbol instead of their name (the name is the tooltip)
-        const TAG_LABEL = { 'halloween': '🎃' };
+        const TAG_LABEL = { 'halloween': '🎃', 'intermission': 'INT' };
         function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)
