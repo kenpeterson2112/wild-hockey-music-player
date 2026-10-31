@@ -321,7 +321,7 @@
         .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
            Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
-           navy, green and white, Intensity hot pink with black text).
+           navy, green and white, Intermission red, white and blue).
            Other tags stay neutral. */
         .tc-green  { --tc: #1DB954; }
         .tc-red    { --tc: #e0455e; }
@@ -330,7 +330,7 @@
         .tc-orange { --tc: #fb7139; }
         .tc-purple { --tc: #a855f7; }
         .tc-wild   { --tc: #22c55e; }
-        .tc-pink   { --tc: #ff2d95; }
+        .tc-rwb    { --tc: #e0455e; }
         .tc-pumpkin { --tc: #fb7139; }
         .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
@@ -344,9 +344,10 @@
         /* Wild: team colours from the West Northumberland Wild logo (navy, bright green, white) */
         .chip.tc-wild, .tag-pill.tc-wild { background: #13295e; border-color: #22c55e; color: #fff; }
         .chip.tc-wild.active { background: #1fae4b; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #13295e; }
-        /* Intensity: solid hot pink pill with black text */
-        .tag-pill.tc-pink { background: #ff2d95; border-color: #ff2d95; color: #000; }
-        .chip.tc-pink.active { color: #000; }
+        /* Intermission (INT): red, white and blue. Blue with a red outline and white text;
+           selected turns red with a white outline and a blue ring */
+        .chip.tc-rwb, .tag-pill.tc-rwb { background: #1e3a8a; border-color: #e0455e; color: #fff; }
+        .chip.tc-rwb.active { background: #e0455e; border-color: #fff; color: #fff; box-shadow: 0 0 0 2px #1e3a8a; }
         /* Halloween: just a 🎃 on a black chip; an orange ring shows it's selected */
         .chip.tc-pumpkin, .tag-pill.tc-pumpkin { background: #000; border-color: #3a3a3a; color: #fff; }
         .tag-chips .chip.tc-pumpkin { text-align: center; }
@@ -1177,7 +1178,7 @@
             pregame: 'Pregame'
         };
         const NO_TAG_WORDS = ['whistles', 'betweenwhistles', 'whistle', 'none', 'untagged'];
-        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intensity', 'Halloween'];
+        const DEFAULT_TAGS = ['Power Play', 'Goal For', 'Goal Against', 'Penalty Kill', 'End Game', 'Puck Drop', 'Wild', 'Intermission', 'Halloween'];
 
         function compactTag(raw) { return String(raw == null ? '' : raw).toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
@@ -1191,13 +1192,13 @@
         }
         function tagId(display) { return String(display).toLowerCase(); }
         // Colour class for a tag (same palette as the queue tiles); '' for tags without a colour yet
-        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intensity': 'pink', 'halloween': 'pumpkin' };
+        const TAG_COLORS = { 'goal for': 'green', 'goal against': 'red', 'power play': 'blue', 'penalty kill': 'amber', 'end game': 'orange', 'puck drop': 'purple', 'wild': 'wild', 'intermission': 'rwb', 'halloween': 'pumpkin' };
         // Short codes for the song-row pills (filter chips keep the full names, and act
         // as the colour legend). Tags without a code show their full name.
         const TAG_SHORT = { 'goal for': 'GF', 'goal against': 'GA', 'power play': 'PP', 'penalty kill': 'PK',
-            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intensity': 'INT', 'halloween': '🎃' };
+            'end game': 'EG', 'puck drop': 'PD', 'wild': 'WLD', 'intermission': 'INT', 'halloween': '🎃' };
         // Tags whose chips show a symbol instead of their name (the name is the tooltip)
-        const TAG_LABEL = { 'halloween': '🎃' };
+        const TAG_LABEL = { 'halloween': '🎃', 'intermission': 'INT' };
         function tagColorClass(id) { return TAG_COLORS[id] ? ' tc-' + TAG_COLORS[id] : ''; }
 
         // "Goal For, Power Play" -> ['Goal For', 'Power Play'] (comma or semicolon)

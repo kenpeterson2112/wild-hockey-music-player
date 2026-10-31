@@ -45,8 +45,9 @@ Each song is one line inside `window.SONGS`:
 ### Tags (exact spelling and capitals)
 
 `Power Play`, `Goal For`, `Goal Against`, `Penalty Kill`, `End Game`,
-`Puck Drop`, `Wild`, `Intensity`, `Halloween`
-(Halloween shows in the app as just a 🎃; always type it as `Halloween`)
+`Puck Drop`, `Wild`, `Intermission`, `Halloween`
+(Halloween shows in the app as just a 🎃 and Intermission as INT; always type
+the full name, e.g. `Halloween`, `Intermission`)
 
 There is no "Between Whistles" tag: a song with no tags is a between-whistles
 song. Don't invent new tags without Ken asking; a new tag also needs a colour
