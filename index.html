@@ -1712,11 +1712,16 @@
             renderSongPicker();
         }
 
-        function openTrackSelector(label) {
+        // filterTag (optional): open already filtered to that tag, e.g. a Goal For tile.
+        // Ignored when no song has the tag, so the list is never empty on open.
+        function openTrackSelector(label, filterTag) {
             if (!accessToken) return alert("Please log in first!");
             document.getElementById('track-modal-title').textContent = label;
-            // Always open on the full list; the tag chips are there if you want to narrow it
             pickerTags = new Set();
+            if (filterTag) {
+                const id = tagId(filterTag);
+                if (buildSongList().some(sg => sg.tags.has(id))) pickerTags.add(id);
+            }
             renderSongPicker();
             document.getElementById('track-modal').style.display = 'flex';
         }
@@ -1958,7 +1963,9 @@
             const slot = QUEUE_SLOTS.find(x => x.id === slotId);
             if (!slot) return;
             pickerSlotId = slotId;
-            openTrackSelector('Choose: ' + slot.label);
+            // Situation tiles (Goal For, Goal Against, Power Play, Penalty Kill) open filtered
+            // to their own tag; the whistle tiles open on the full list.
+            openTrackSelector('Choose: ' + slot.label, slot.id.charAt(0) === 'w' ? null : slot.label);
             // openTrackSelector bails out when logged out; don't leave picker mode armed
             if (!accessToken) pickerSlotId = null;
         }
