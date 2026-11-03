@@ -190,6 +190,17 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   }
 }
 
+// ================= A-Z jump bar
+{ const {gid,run}=makeEnv();
+  run("openTrackSelector('x')");
+  check('A-Z bar has # plus 26 letters', gid('az-bar').children.length===27, gid('az-bar').children.length);
+  const first=run("(()=>{const r=azRowFor('M'); return r&&r.azLetter})()");
+  const names=run("window.SONGS.map(s=>s.name)");
+  const expect=names.map(n=>run(`azLetterOf(${JSON.stringify(n)})`)).filter(l=>l>='M'&&l!=='#').sort()[0];
+  check('tapping M jumps to the first song at or after M', first===expect, first+' vs '+expect);
+  check('digits file under #', run("azLetterOf('9 to 5')")==='#' && run("azLetterOf(\"'Til Tuesday\")")==='T');
+}
+
 // ================= Clear (🧹) button and modal
 { const A='spotify:track:AAAAAAAAAAAAAAAAAAAAA1';
   { const {gid,run}=makeEnv();
