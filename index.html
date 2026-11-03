@@ -296,12 +296,29 @@
         /* Song picker: fixed size so a short (filtered) list doesn't shrink the window */
         .track-modal-content { height: min(80vh, 640px); max-height: none; }
         .track-modal-content .modal-header { flex-shrink: 0; }
+        .track-list-wrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
         .track-list {
             overflow-y: auto;
-            padding: 12px;
+            padding: 12px 40px 12px 12px; /* right padding leaves room for the A-Z bar */
             flex: 1 1 auto;
             min-height: 0;
         }
+        /* A-Z jump bar: tap or slide a thumb down it to jump through the alphabet */
+        .az-bar {
+            position: absolute; top: 6px; bottom: 6px; right: 0; width: 36px;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+            touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+        }
+        .az-bar span { flex: 1; display: flex; align-items: center; font-size: 0.62rem; font-weight: 700; color: #9aa0ad; line-height: 1; }
+        .az-bar span.off { opacity: 0.25; }
+        .az-bar.touching { background: rgba(255,255,255,0.05); border-radius: 18px; }
+        .az-pop {
+            position: absolute; right: 48px; top: 50%; transform: translateY(-50%);
+            width: 56px; height: 56px; border-radius: 14px; background: #1DB954; color: #07210f;
+            font-size: 1.8rem; font-weight: 800; display: none; align-items: center; justify-content: center;
+            pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        .az-pop.show { display: flex; }
         .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
         .picker-filters .tag-chips { flex: 1 1 auto; min-width: 0; }
         /* Two rows of chips that still slide sideways; the most-used tags fill the first columns */
@@ -546,7 +563,11 @@
                 <div id="tag-chips" class="tag-chips"></div>
                 <button id="chip-clear-btn" class="chip chip-clear off" title="Clear tag filters">✕</button>
             </div>
-            <div id="track-list" class="track-list"></div>
+            <div class="track-list-wrap">
+                <div id="track-list" class="track-list"></div>
+                <div id="az-bar" class="az-bar" aria-hidden="true"></div>
+                <div id="az-pop" class="az-pop"></div>
+            </div>
         </div>
     </div>
 
@@ -1806,6 +1827,7 @@
 
                 const item = document.createElement('div');
                 item.className = 'track-item' + (dim ? ' dim' : '');
+                item.azLetter = dim ? null : azLetterOf(name); // only the main (A-Z sorted) group is jumpable
 
                 const info = document.createElement('div');
                 info.className = 'track-info';
@@ -1882,6 +1904,69 @@
             available.forEach(sg => addRow(sg, false));
             if (queued.length) { addDivider('Already queued', queued.length); queued.forEach(sg => addRow(sg, true)); }
             if (played.length) { addDivider('Already played', played.length); played.forEach(sg => addRow(sg, true)); }
+            renderAzBar();
+        }
+
+        // --- A-Z jump bar beside the song list ---
+        const AZ_LETTERS = ['#'].concat('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
+        function azLetterOf(name) {
+            const m = String(name).match(/[A-Za-z0-9]/);
+            if (!m) return '#';
+            const c = m[0].toUpperCase();
+            return /[0-9]/.test(c) ? '#' : c;
+        }
+        // First row in the main group at or after this letter (so a letter with no
+        // songs jumps to the next one that has some)
+        function azRowFor(letter) {
+            const rows = Array.from(document.getElementById('track-list').children);
+            const want = AZ_LETTERS.indexOf(letter);
+            let best = null;
+            for (const r of rows) {
+                if (!r.azLetter) continue;
+                if (AZ_LETTERS.indexOf(r.azLetter) >= want) { best = r; break; }
+            }
+            return best;
+        }
+        function azJump(letter) {
+            const row = azRowFor(letter);
+            const list = document.getElementById('track-list');
+            if (row && list) list.scrollTop = Math.max(0, row.offsetTop - 8);
+            const pop = document.getElementById('az-pop');
+            if (pop) { pop.textContent = letter; pop.classList.add('show'); }
+        }
+        function renderAzBar() {
+            const bar = document.getElementById('az-bar');
+            if (!bar) return;
+            const have = new Set();
+            const list = document.getElementById('track-list');
+            Array.from(list.children || []).forEach(r => { if (r.azLetter) have.add(r.azLetter); });
+            bar.innerHTML = '';
+            bar.style.display = have.size > 1 ? '' : 'none'; // nothing to jump between
+            AZ_LETTERS.forEach((l) => {
+                const sp = document.createElement('span');
+                sp.textContent = l;
+                if (!have.has(l)) sp.className = 'off';
+                bar.appendChild(sp);
+            });
+            const letterAt = (clientY) => {
+                const r = bar.getBoundingClientRect();
+                const i = Math.floor(((clientY - r.top) / r.height) * AZ_LETTERS.length);
+                return AZ_LETTERS[Math.max(0, Math.min(AZ_LETTERS.length - 1, i))];
+            };
+            const end = () => {
+                bar.classList.remove('touching');
+                const pop = document.getElementById('az-pop');
+                if (pop) pop.classList.remove('show');
+            };
+            bar.onpointerdown = (e) => {
+                e.preventDefault();
+                if (bar.setPointerCapture) bar.setPointerCapture(e.pointerId);
+                bar.classList.add('touching');
+                azJump(letterAt(e.clientY));
+            };
+            bar.onpointermove = (e) => { if (bar.classList.contains('touching')) azJump(letterAt(e.clientY)); };
+            bar.onpointerup = end;
+            bar.onpointercancel = end;
         }
 
         function closeTrackSelector() {

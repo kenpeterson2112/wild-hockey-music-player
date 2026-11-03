@@ -38,6 +38,7 @@ LANDMARKS = {
     "chip-clear": "tag chip clear (X) button",
     "QUEUE_SLOTS": "soundboard tiles",
     "TAG_COLORS": "tag colours",
+    "az-bar": "A-Z jump bar in the song picker",
 }
 
 URI_RE = re.compile(r"spotify:track:[A-Za-z0-9]{22}")
