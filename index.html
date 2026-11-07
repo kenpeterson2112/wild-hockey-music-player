@@ -645,13 +645,6 @@
                     <div id="library-reset-status" class="status-line"></div>
                 </details>
 
-                <details class="settings-more">
-                    <summary>Use my own pregame file</summary>
-                    <p>Upload a file to play instead of the built-in announcement. Remove it to go back.</p>
-                    <input type="file" id="pregame-file-input" accept="audio/*" onchange="handlePregameFileSelect()">
-                    <button class="settings-btn-action" id="pregame-remove-btn" style="display: none;" onclick="removePregameFile()">Remove file</button>
-                    <div id="pregame-file-status" class="status-line"></div>
-                </details>
             </div>
         </div>
     </div>
@@ -1073,81 +1066,10 @@
 
         // --- SETTINGS ---
 
-        // --- PREGAME ANNOUNCEMENT STORAGE ---
-        // The announcement is held in IndexedDB, not localStorage. A file read as a
-        // data URL runs about a third larger than the file itself, and localStorage
-        // gives an origin roughly 5MB in total, so a normal announcement recording
-        // overruns it. setItem throws on quota and lsSet swallows that, so the old
-        // build could fail to save a new file while still saving its NAME: the
-        // button then played the PREVIOUS announcement under the new file's name.
-        //
-        // Name and audio now live in one record, written in one transaction, so
-        // they cannot drift apart no matter how the write goes.
-        const PREGAME_DB_NAME = 'wild-soundboard';
-        const PREGAME_STORE = 'pregame';
-        const PREGAME_KEY = 'announcement';
-
-        function pregameDb() {
-            return new Promise((resolve, reject) => {
-                let req;
-                try { req = indexedDB.open(PREGAME_DB_NAME, 1); }
-                catch (e) { reject(e); return; }
-                req.onupgradeneeded = () => {
-                    const db = req.result;
-                    if (!db.objectStoreNames.contains(PREGAME_STORE)) db.createObjectStore(PREGAME_STORE);
-                };
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => reject(req.error || new Error('IndexedDB unavailable'));
-                req.onblocked = () => reject(new Error('IndexedDB blocked by another tab'));
-            });
-        }
-
-        // `run` is called synchronously against a live transaction, and the promise
-        // settles on the transaction itself, so a resolved write is a durable write.
-        function pregameOp(mode, run) {
-            return pregameDb().then(db => new Promise((resolve, reject) => {
-                let tx, req;
-                try {
-                    tx = db.transaction(PREGAME_STORE, mode);
-                    req = run(tx.objectStore(PREGAME_STORE));
-                } catch (e) { reject(e); return; }
-                tx.oncomplete = () => resolve(req ? req.result : undefined);
-                tx.onabort = tx.onerror = () => reject(tx.error || new Error('Storage transaction failed'));
-            }));
-        }
-
-        const pregameRead = () => pregameOp('readonly', s => s.get(PREGAME_KEY));
-        const pregameWrite = (record) => pregameOp('readwrite', s => s.put(record, PREGAME_KEY));
-        const pregameDelete = () => pregameOp('readwrite', s => s.delete(PREGAME_KEY));
-
-        let pregameAudioData = null;
-        let pregameFileName = '';
-        let pregameNotice = '';
-
-        // Anything the old build left in localStorage is cleared rather than carried
-        // over: a pair saved there may be a mismatched one (old audio, new name) and
-        // nothing in it says which. Better to ask for the file once than to play the
-        // wrong announcement at a game.
-        if (lsGet('pregame_audio_data') || lsGet('pregame_file_name')) {
-            lsRemove('pregame_audio_data');
-            lsRemove('pregame_file_name');
-            pregameNotice = 'An update cleared the old saved file — please choose it again.';
-        }
-
-        const pregameReady = (async () => {
-            try {
-                const record = await pregameRead();
-                if (record && record.data) {
-                    pregameAudioData = record.data;
-                    pregameFileName = record.name || '';
-                    pregameNotice = '';
-                }
-            } catch (err) {
-                console.error('Could not read the saved announcement:', err);
-                pregameNotice = 'This browser is blocking file storage, so no announcement can be saved.';
-            }
-            updatePregameFileStatus();
-        })();
+        // Pregame sounds are hardcoded per button. Older builds let a file be uploaded
+        // in Settings; clear anything they left behind so it frees the space.
+        try { lsRemove('pregame_audio_data'); lsRemove('pregame_file_name'); } catch (e) {}
+        try { indexedDB.deleteDatabase('wild-soundboard'); } catch (e) {}
 
         // --- PLAY COUNTS (per track URI, persisted for the game) ---
         let playCounts = {};
@@ -1575,7 +1497,6 @@
 
         function openSettings() {
             document.getElementById('settings-modal').style.display = 'flex';
-            updatePregameFileStatus();
             refreshCacheStatus();
             const el = document.getElementById('reset-status');
             if (el) el.textContent = '';
@@ -1600,107 +1521,6 @@
         }
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
-        }
-
-        function formatFileSize(bytes) {
-            if (!bytes) return '';
-            const mb = bytes / (1024 * 1024);
-            return mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(bytes / 1024) + ' KB';
-        }
-
-        function readFileAsDataUrl(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = () => reject(reader.error || new Error('Could not read the file'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function handlePregameFileSelect() {
-            const input = document.getElementById('pregame-file-input');
-            const file = input.files[0];
-            // Clearing the input means picking the SAME file again still fires onchange.
-            input.value = '';
-            if (!file) return;
-
-            setPregameStatus(`Saving ${file.name}…`, '#8a8f9c');
-
-            let dataUrl;
-            try {
-                dataUrl = await readFileAsDataUrl(file);
-            } catch (err) {
-                console.error('Could not read the chosen file:', err);
-                updatePregameFileStatus();
-                alert(`Could not read "${file.name}". Try a different audio file.`);
-                return;
-            }
-
-            // Drop the previous announcement BEFORE storing the new one. If the write
-            // below fails, the button must fall back to the Spotify list rather than
-            // keep playing the file that was just replaced.
-            pregameAudioData = null;
-            pregameFileName = '';
-            pregameNotice = '';
-            stopPregameAudio();
-            try { await pregameDelete(); } catch (err) { console.error('Could not clear the old announcement:', err); }
-
-            try {
-                await pregameWrite({ name: file.name, data: dataUrl, size: file.size, savedAt: Date.now() });
-                pregameAudioData = dataUrl;
-                pregameFileName = file.name;
-                updatePregameFileStatus();
-            } catch (err) {
-                console.error('Could not save the announcement:', err);
-                pregameNotice = 'That file could not be saved, so the Pregame button uses the built-in announcement.';
-                updatePregameFileStatus();
-                alert(`Could not save "${file.name}" (${formatFileSize(file.size)}).\n\n`
-                    + 'This browser refused to store a file that size. A shorter clip, or the same '
-                    + 'recording exported at a lower bitrate, should save fine.');
-            }
-        }
-
-        async function removePregameFile() {
-            if (!pregameAudioData && !pregameFileName) {
-                setPregameStatus('No uploaded file to remove — the Pregame button already uses the built-in announcement.', '#8a8f9c');
-                return;
-            }
-            const removed = pregameFileName;
-            stopPregameAudio();
-            pregameAudioData = null;
-            pregameFileName = '';
-            pregameNotice = '';
-            try {
-                await pregameDelete();
-                updatePregameFileStatus();
-                setPregameStatus(`✓ Removed ${removed || 'the saved file'} — the Pregame button now uses the built-in announcement.`, '#1DB954');
-            } catch (err) {
-                console.error('Could not remove the announcement:', err);
-                updatePregameFileStatus();
-                alert('Could not remove the saved file. Close any other open tabs of this app and try again.');
-            }
-        }
-
-        function setPregameStatus(text, color) {
-            const statusDiv = document.getElementById('pregame-file-status');
-            if (!statusDiv) return;
-            statusDiv.textContent = text;
-            statusDiv.style.color = color;
-        }
-
-        function updatePregameFileStatus() {
-            const pregameBtn = document.getElementById('pregame-btn-wild');
-            const removeBtn = document.getElementById('pregame-remove-btn');
-
-            if (pregameFileName) {
-                setPregameStatus(`✓ Using your uploaded file: ${pregameFileName}`, '#1DB954');
-                if (pregameBtn) pregameBtn.classList.remove('no-track');
-                if (removeBtn) removeBtn.style.display = '';
-            } else {
-                setPregameStatus(pregameNotice || 'Using the built-in announcement', pregameNotice ? '#f59e0b' : '#8a8f9c');
-                if (pregameBtn) pregameBtn.classList.remove('no-track');
-                if (removeBtn) removeBtn.style.display = 'none';
-            }
         }
 
         // --- TRACK SELECTOR MODAL ---
@@ -2092,16 +1912,7 @@
             if (PREGAMES[key]) pregameChoice = key;
             if (!accessToken) return alert("Please log in first!");
 
-            // The saved file loads asynchronously at startup. Waiting on that here
-            // keeps an early tap from falling through to the Spotify list.
-            try { await pregameReady; } catch (err) { /* handled at load */ }
-
-            // A file uploaded in Settings replaces the Wild pregame only; the Nighthawks
-            // button always plays its own built-in file.
-            if (pregameAudioData && pregameChoice === 'wild') {
-                playPregameAudio(pregameAudioData, pregameFileName || 'Pregame Announcement');
-                return;
-            }
+            // Each button plays its own built-in file (no uploaded override).
             const pg = PREGAMES[pregameChoice];
             const src = await builtInAudioSrc(pg.url);
             playPregameAudio(src, 'Pregame: ' + pg.label);
@@ -2494,7 +2305,6 @@
         // --- Initialize ---
         try {
             renderQueue();
-            updatePregameFileStatus();
             cacheBuiltInPregame(false); // quietly save the built-in sounds for offline use
             checkAuth();
         } catch (err) {
