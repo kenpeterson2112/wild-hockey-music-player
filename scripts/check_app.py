@@ -39,6 +39,9 @@ LANDMARKS = {
     "QUEUE_SLOTS": "soundboard tiles",
     "TAG_COLORS": "tag colours",
     "az-bar": "A-Z jump bar in the song picker",
+    "playOneUp": "1-Up (penalty over) button",
+    "pregame-btn-wild": "Wild pregame button",
+    "pregame-btn-nighthawks": "Nighthawks pregame button",
 }
 
 URI_RE = re.compile(r"spotify:track:[A-Za-z0-9]{22}")

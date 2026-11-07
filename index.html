@@ -55,6 +55,15 @@
             gap: 8px;
             flex-shrink: 0;
         }
+        /* Sound buttons: Wild pregame, Nighthawks pregame, 1-Up (penalty over) */
+        .sound-btn {
+            flex: 1 1 0; min-width: 0; min-height: clamp(52px, 8vh, 74px); padding: 4px;
+            background: #23262e; border: 1px solid #333842;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sound-btn img { max-height: clamp(44px, 7vh, 64px); max-width: 100%; object-fit: contain; }
+        .sound-btn .sound-txt { font-size: 0.72rem; font-weight: 800; line-height: 1.1; color: #c9ccd4; letter-spacing: 0.5px; }
+        .sound-btn:active { filter: brightness(1.4); transform: scale(0.97); }
         .btn-full {
             flex: 1 1 auto;
             background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
@@ -532,9 +541,13 @@
 
     <div id="app-screen">
         <div class="pregame-row">
-            <button class="btn-full" id="pregame-btn" onclick="playPregame()">
-                <span>📣</span> Pregame Announcement
+            <button id="pregame-btn-wild" class="sound-btn" onclick="playPregame('wild')" title="Wild pregame">
+                <img src="icons/wild-logo.png" alt="Wild pregame">
             </button>
+            <button id="pregame-btn-nighthawks" class="sound-btn" onclick="playPregame('nighthawks')" title="Nighthawks pregame">
+                <img src="icons/nighthawks-logo.png" alt="Nighthawks pregame">
+            </button>
+            <button id="oneup-btn" class="sound-btn" onclick="playOneUp()" title="Penalty over: 1-Up sound"><img src="icons/one-up.png" alt="1-Up (penalty over)"></button>
             <button id="clear-btn" class="sync-btn" onclick="openClearModal()" title="Clear played songs / empty the soundboard">🧹</button>
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
@@ -611,7 +624,7 @@
                     <div class="settings-grid">
                         <button class="settings-btn-action" onclick="resetPlayCounts()">Reset play counter</button>
                         <button class="settings-btn-action" onclick="resyncSpotify()">Reconnect Spotify</button>
-                        <button class="settings-btn-action" onclick="cacheBuiltInPregame(true)">Save pregame offline</button>
+                        <button class="settings-btn-action" onclick="cacheBuiltInPregame(true)">Save sounds offline</button>
                         <button class="settings-btn-action" onclick="openAddSong()">➕ Add a song</button>
                     </div>
                     <div id="reset-status" class="status-line"></div>
@@ -1676,7 +1689,7 @@
         }
 
         function updatePregameFileStatus() {
-            const pregameBtn = document.getElementById('pregame-btn');
+            const pregameBtn = document.getElementById('pregame-btn-wild');
             const removeBtn = document.getElementById('pregame-remove-btn');
 
             if (pregameFileName) {
@@ -2075,7 +2088,8 @@
         // --- PREGAME AUDIO ---
         let pregameAudioElement = null;
 
-        async function playPregame() {
+        async function playPregame(key) {
+            if (PREGAMES[key]) pregameChoice = key;
             if (!accessToken) return alert("Please log in first!");
 
             // The saved file loads asynchronously at startup. Waiting on that here
@@ -2087,8 +2101,27 @@
                 playPregameAudio(pregameAudioData, pregameFileName || 'Pregame Announcement');
                 return;
             }
-            const src = await builtInPregameSrc();
-            playPregameAudio(src, 'Pregame Announcement');
+            const pg = PREGAMES[pregameChoice];
+            const src = await builtInAudioSrc(pg.url);
+            playPregameAudio(src, 'Pregame: ' + pg.label);
+        }
+
+        // Which built-in pregame the Pregame button plays; remembered on the phone.
+        const PREGAMES = {
+            wild:       { url: 'audio/pregame-v1.mp3',            label: 'Wild' },
+            nighthawks: { url: 'audio/pregame-nighthawks-v1.mp3', label: 'Nighthawks' }
+        };
+        let pregameChoice = 'wild';
+
+        // --- 1-UP (penalty over): short sound on its own player so it never cuts off the pregame ---
+        const ONE_UP_URL = 'audio/one-up-v1.mp3';
+        let oneUpElement = null;
+        async function playOneUp() {
+            const src = await builtInAudioSrc(ONE_UP_URL);
+            if (!oneUpElement) oneUpElement = new Audio();
+            oneUpElement.src = src;
+            oneUpElement.currentTime = 0;
+            oneUpElement.play().catch(err => console.error('Error playing 1-Up:', err));
         }
 
         function playPregameAudio(src, label) {
@@ -2108,9 +2141,10 @@
         // --- BUILT-IN PREGAME ANNOUNCEMENT (lives in the repo, cached on the phone) ---
         // Versioned file name: to replace it, add pregame-v2.mp3 and change this one
         // line. The new name can never be served stale from an old cache.
-        const BUILTIN_PREGAME_URL = 'audio/pregame-v1.mp3';
+        // Every sound built into the app; all are saved on the phone so they play with no signal.
+        const BUILTIN_AUDIO_URLS = ['audio/pregame-v1.mp3', 'audio/pregame-nighthawks-v1.mp3', 'audio/one-up-v1.mp3'];
         const PREGAME_CACHE = 'pregame-audio';
-        let builtInObjectUrl = null;
+        const builtInObjectUrls = {};
 
         function setCacheStatus(text, color) {
             const el = document.getElementById('pregame-cache-status');
@@ -2127,13 +2161,13 @@
             try {
                 if (verbose) setCacheStatus('Saving…', '#8a8f9c');
                 const cache = await caches.open(PREGAME_CACHE);
-                if (!(await cache.match(BUILTIN_PREGAME_URL))) {
-                    await cache.add(BUILTIN_PREGAME_URL);
+                for (const url of BUILTIN_AUDIO_URLS) {
+                    if (!(await cache.match(url))) await cache.add(url);
                 }
-                // Drop any older announcement file left from a previous version
+                // Drop any older sound file left from a previous version
                 const keys = await cache.keys();
                 for (const req of keys) {
-                    if (!req.url.endsWith(BUILTIN_PREGAME_URL)) await cache.delete(req);
+                    if (!BUILTIN_AUDIO_URLS.some(u => req.url.endsWith(u))) await cache.delete(req);
                 }
                 if (verbose) setCacheStatus('✓ Saved on this phone — plays with no signal.', '#1DB954');
                 return true;
@@ -2148,26 +2182,26 @@
             if (!('caches' in window)) return;
             try {
                 const cache = await caches.open(PREGAME_CACHE);
-                const saved = !!(await cache.match(BUILTIN_PREGAME_URL));
+                let saved = true;
+                for (const url of BUILTIN_AUDIO_URLS) { if (!(await cache.match(url))) saved = false; }
                 setCacheStatus(saved ? '✓ Saved on this phone — plays with no signal.' : 'Not saved on this phone yet.', saved ? '#1DB954' : '#f59e0b');
             } catch (err) { /* status only */ }
         }
 
         // Prefer the saved copy (works offline); fall back to fetching it from the site.
-        async function builtInPregameSrc() {
+        async function builtInAudioSrc(url) {
             try {
                 if ('caches' in window) {
+                    if (builtInObjectUrls[url]) return builtInObjectUrls[url];
                     const cache = await caches.open(PREGAME_CACHE);
-                    const hit = await cache.match(BUILTIN_PREGAME_URL);
+                    const hit = await cache.match(url);
                     if (hit) {
-                        const blob = await hit.blob();
-                        if (builtInObjectUrl) URL.revokeObjectURL(builtInObjectUrl);
-                        builtInObjectUrl = URL.createObjectURL(blob);
-                        return builtInObjectUrl;
+                        builtInObjectUrls[url] = URL.createObjectURL(await hit.blob());
+                        return builtInObjectUrls[url];
                     }
                 }
             } catch (err) { console.error('Cache read failed, using network copy:', err); }
-            return BUILTIN_PREGAME_URL;
+            return url;
         }
 
         function stopPregameAudio() {
@@ -2460,7 +2494,7 @@
         try {
             renderQueue();
             updatePregameFileStatus();
-            cacheBuiltInPregame(false); // quietly save the announcement for offline use
+            cacheBuiltInPregame(false); // quietly save the built-in sounds for offline use
             checkAuth();
         } catch (err) {
             console.error("Init error:", err);
