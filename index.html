@@ -2096,8 +2096,9 @@
             // keeps an early tap from falling through to the Spotify list.
             try { await pregameReady; } catch (err) { /* handled at load */ }
 
-            // An uploaded file wins; otherwise play the announcement built into the app.
-            if (pregameAudioData) {
+            // A file uploaded in Settings replaces the Wild pregame only; the Nighthawks
+            // button always plays its own built-in file.
+            if (pregameAudioData && pregameChoice === 'wild') {
                 playPregameAudio(pregameAudioData, pregameFileName || 'Pregame Announcement');
                 return;
             }
