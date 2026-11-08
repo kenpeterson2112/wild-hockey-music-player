@@ -1926,7 +1926,7 @@
         let pregameChoice = 'wild';
 
         // --- 1-UP (penalty over): short sound on its own player so it never cuts off the pregame ---
-        const ONE_UP_URL = 'audio/one-up-v1.mp3';
+        const ONE_UP_URL = 'audio/one-up-v2.mp3';
         let oneUpElement = null;
         async function playOneUp() {
             const src = await builtInAudioSrc(ONE_UP_URL);
@@ -1954,7 +1954,7 @@
         // Versioned file name: to replace it, add pregame-v2.mp3 and change this one
         // line. The new name can never be served stale from an old cache.
         // Every sound built into the app; all are saved on the phone so they play with no signal.
-        const BUILTIN_AUDIO_URLS = ['audio/pregame-v1.mp3', 'audio/pregame-nighthawks-v1.mp3', 'audio/one-up-v1.mp3'];
+        const BUILTIN_AUDIO_URLS = ['audio/pregame-v1.mp3', 'audio/pregame-nighthawks-v1.mp3', 'audio/one-up-v2.mp3'];
         const PREGAME_CACHE = 'pregame-audio';
         const builtInObjectUrls = {};
 
