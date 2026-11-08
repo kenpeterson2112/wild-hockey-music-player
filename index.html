@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wild Soundboard</title>
+    <title>Hockey Soundboard</title>
+    <meta name="apple-mobile-web-app-title" content="Hockey Soundboard">
+    <meta name="application-name" content="Hockey Soundboard">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=3">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/favicon-192.png?v=3">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
@@ -55,7 +57,7 @@
             gap: 8px;
             flex-shrink: 0;
         }
-        /* Sound buttons: Wild pregame, Nighthawks pregame, 1-Up (penalty over) */
+        /* Sound buttons: Wild pregame, Nighthawks pregame, 1-Up (penalty over), Super Mushroom */
         .sound-btn {
             flex: 1 1 0; min-width: 0; min-height: clamp(52px, 8vh, 74px); padding: 4px;
             background: #23262e; border: 1px solid #333842;
@@ -94,6 +96,9 @@
             border: 1px solid #333842;
         }
         .sync-btn:disabled { opacity: 0.3; cursor: default; }
+        .clear-songs-btn { margin-top: 0; font-size: 1rem; }
+        .clear-songs-btn:disabled { opacity: 0.35; cursor: default; }
+        #clear-modal { z-index: 1001; } /* opens on top of Settings */
         .sync-btn {
             font-size: 1.4rem;
             flex-shrink: 0;
@@ -553,7 +558,7 @@
                 <img src="icons/nighthawks-logo.png" alt="Nighthawks pregame">
             </button>
             <button id="oneup-btn" class="sound-btn" onclick="playOneUp()" title="Penalty over: 1-Up sound"><img src="icons/one-up.png" alt="1-Up (penalty over)"></button>
-            <button id="clear-btn" class="sync-btn" onclick="openClearModal()" title="Clear played songs / empty the soundboard">🧹</button>
+            <button id="mushroom-btn" class="sound-btn" onclick="playMushroom()" title="Super Mushroom sound"><img src="icons/super-mushroom.png" alt="Super Mushroom"></button>
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
 
@@ -617,6 +622,10 @@
             </div>
             <div class="settings-body">
                 <div class="settings-section">
+                    <button id="clear-btn" class="settings-btn-action clear-songs-btn" onclick="openClearModal()" title="Clear played songs / empty the soundboard">🧹 Clear songs</button>
+                </div>
+
+                <div class="settings-section">
                     <h3>Playback Device</h3>
                     <p>Open Spotify on the device you want, then tap it here.</p>
                     <div id="device-list"></div>
@@ -639,7 +648,7 @@
 
                 <details class="settings-more" id="most-played" ontoggle="if (this.open) renderMostPlayed()">
                     <summary>Most played (all time)</summary>
-                    <p>Every play on this device, counted since this feature was added. The 🧹 Clear button and Reset play counter don't touch these.</p>
+                    <p>Every play on this device, counted since this feature was added. Clear songs and Reset play counter don't touch these.</p>
                     <ol id="most-played-list" class="most-played-list"></ol>
                     <div id="most-played-status" class="status-line"></div>
                     <button class="settings-btn-action" id="most-played-reset" onclick="resetAllTimeCounts()">Reset all-time counts</button>
@@ -1141,7 +1150,7 @@
         }
 
         // --- CLEAR MODAL: clear the played list and/or empty the soundboard ---
-        // The 🧹 button is dimmed when there's nothing to clear. In the modal each
+        // The Clear songs button (top of Settings) is dimmed when there's nothing to clear. In the modal each
         // option clears straight away when tapped and dims when its count is 0; once
         // nothing is left to clear, the modal closes itself.
         function playedCount() { return Object.keys(playCounts).filter(k => playCounts[k] > 0).length; }
@@ -1433,7 +1442,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'wild-soundboard-custom-songs.json';
+                a.download = 'hockey-soundboard-custom-songs.json';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1996,6 +2005,17 @@
             oneUpElement.play().catch(err => console.error('Error playing 1-Up:', err));
         }
 
+        // --- SUPER MUSHROOM: second short sound, its own player like the 1-Up ---
+        const MUSHROOM_URL = 'audio/super-mushroom-v1.mp3';
+        let mushroomElement = null;
+        async function playMushroom() {
+            const src = await builtInAudioSrc(MUSHROOM_URL);
+            if (!mushroomElement) mushroomElement = new Audio();
+            mushroomElement.src = src;
+            mushroomElement.currentTime = 0;
+            mushroomElement.play().catch(err => console.error('Error playing Super Mushroom:', err));
+        }
+
         function playPregameAudio(src, label) {
             if (!pregameAudioElement) {
                 pregameAudioElement = new Audio();
@@ -2014,7 +2034,7 @@
         // Versioned file name: to replace it, add pregame-v2.mp3 and change this one
         // line. The new name can never be served stale from an old cache.
         // Every sound built into the app; all are saved on the phone so they play with no signal.
-        const BUILTIN_AUDIO_URLS = ['audio/pregame-v1.mp3', 'audio/pregame-nighthawks-v1.mp3', 'audio/one-up-v2.mp3'];
+        const BUILTIN_AUDIO_URLS = ['audio/pregame-v1.mp3', 'audio/pregame-nighthawks-v1.mp3', 'audio/one-up-v2.mp3', 'audio/super-mushroom-v1.mp3'];
         const PREGAME_CACHE = 'pregame-audio';
         const builtInObjectUrls = {};
 
