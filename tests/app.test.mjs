@@ -228,5 +228,21 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   }
 }
 
+// ================= All-time most played (survives game resets)
+{ const {sb,gid,run,store}=makeEnv();
+  const [s1,s2]=run('window.SONGS').slice(0,2);
+  run(`incrementPlayCount('${s1.uri}','x'); incrementPlayCount('${s2.uri}','y'); incrementPlayCount('${s2.uri}','y')`);
+  run("applyClear('played'); resetPlayCounts()");
+  const at=JSON.parse(store.get('play_counts_all_time'));
+  check('all-time counts survive Clear and Reset play counter', store.get('play_counts')==='{}' && at[s1.uri].n===1 && at[s2.uri].n===2);
+  run('renderMostPlayed()');
+  const li=gid('most-played-list').children;
+  check('most played: sorted by plays, uses repo song names', li.length===2 && li[0].children[1].textContent===s2.name && li[0].children[2].textContent==='×2', li.map(l=>l.children.map(c=>c.textContent).join(' ')).join(' | '));
+  sb.confirm=()=>false; run('resetAllTimeCounts()');
+  check('cancelled reset keeps all-time counts', Object.keys(JSON.parse(store.get('play_counts_all_time'))).length===2);
+  sb.confirm=()=>true; run('resetAllTimeCounts()');
+  check('confirmed reset clears all-time counts', store.get('play_counts_all_time')==='{}' && gid('most-played-list').children.length===0);
+}
+
 console.log(`\n${ok} passed, ${bad} failed`);
 if (bad) process.exit(1);
