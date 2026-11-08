@@ -465,6 +465,11 @@
         .settings-more p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .settings-more input[type="file"] { width: 100%; padding: 11px; background: #20232c; border: 1px solid #2c313d; border-radius: 8px; color: white; font-family: inherit; margin-top: 8px; }
         .settings-more .settings-btn-action { margin-top: 8px; }
+        .most-played-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+        .most-played-list li { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid #23262f; font-size: 0.9rem; }
+        .most-played-list .mp-rank { color: #8a8f9c; min-width: 1.8em; text-align: right; font-variant-numeric: tabular-nums; }
+        .most-played-list .mp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .most-played-list .mp-n { color: #1DB954; font-weight: 700; font-variant-numeric: tabular-nums; }
         .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
         .settings-section p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .settings-section input[type="file"],
@@ -631,6 +636,14 @@
                     <div id="spotify-conn-status" class="status-line"></div>
                     <div id="pregame-cache-status" class="status-line"></div>
                 </div>
+
+                <details class="settings-more" id="most-played" ontoggle="if (this.open) renderMostPlayed()">
+                    <summary>Most played (all time)</summary>
+                    <p>Every play on this device, counted since this feature was added. The 🧹 Clear button and Reset play counter don't touch these.</p>
+                    <ol id="most-played-list" class="most-played-list"></ol>
+                    <div id="most-played-status" class="status-line"></div>
+                    <button class="settings-btn-action" id="most-played-reset" onclick="resetAllTimeCounts()">Reset all-time counts</button>
+                </details>
 
                 <details class="settings-more">
                     <summary>Backup &amp; share my songs</summary>
@@ -1075,11 +1088,56 @@
         let playCounts = {};
         try { playCounts = JSON.parse(lsGet('play_counts') || '{}') || {}; } catch (e) { playCounts = {}; }
 
-        function incrementPlayCount(uri) {
+        // All-time counts live under their own key and are never touched by the
+        // per-game Clear / Reset play counter. Each entry: { n: plays, name, last: ms }.
+        let allTimeCounts = {};
+        try { allTimeCounts = JSON.parse(lsGet('play_counts_all_time') || '{}') || {}; } catch (e) { allTimeCounts = {}; }
+
+        function incrementPlayCount(uri, name) {
             if (!uri) return;
             playCounts[uri] = (playCounts[uri] || 0) + 1;
             lsSet('play_counts', JSON.stringify(playCounts));
+            const prev = allTimeCounts[uri] || {};
+            allTimeCounts[uri] = { n: (prev.n || 0) + 1, name: name || prev.name || '', last: Date.now() };
+            lsSet('play_counts_all_time', JSON.stringify(allTimeCounts));
             updateClearBtn();
+        }
+
+        function mostPlayed() {
+            const names = new Map(buildSongList().map(sg => [sg.uri, sg.name]));
+            return Object.keys(allTimeCounts)
+                .map(uri => ({ uri, n: allTimeCounts[uri].n || 0, name: names.get(uri) || allTimeCounts[uri].name || 'Unknown song' }))
+                .filter(r => r.n > 0)
+                .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+        }
+
+        function renderMostPlayed() {
+            const list = document.getElementById('most-played-list');
+            const status = document.getElementById('most-played-status');
+            const resetBtn = document.getElementById('most-played-reset');
+            if (!list) return;
+            list.innerHTML = '';
+            const rows = mostPlayed();
+            rows.forEach((r, i) => {
+                const li = document.createElement('li');
+                const rank = document.createElement('span'); rank.className = 'mp-rank'; rank.textContent = (i + 1) + '.';
+                const nm = document.createElement('span'); nm.className = 'mp-name'; nm.textContent = r.name;
+                const n = document.createElement('span'); n.className = 'mp-n'; n.textContent = '×' + r.n;
+                li.appendChild(rank); li.appendChild(nm); li.appendChild(n);
+                list.appendChild(li);
+            });
+            const total = rows.reduce((t, r) => t + r.n, 0);
+            if (status) status.textContent = rows.length
+                ? total + ' play' + (total === 1 ? '' : 's') + ' across ' + rows.length + ' song' + (rows.length === 1 ? '' : 's')
+                : 'No plays counted yet. Play a song and it shows up here.';
+            if (resetBtn) resetBtn.style.display = rows.length ? '' : 'none';
+        }
+
+        function resetAllTimeCounts() {
+            if (!confirm('Reset all-time play counts on this device? This cannot be undone.')) return;
+            allTimeCounts = {};
+            lsSet('play_counts_all_time', JSON.stringify(allTimeCounts));
+            renderMostPlayed();
         }
 
         // --- CLEAR MODAL: clear the played list and/or empty the soundboard ---
@@ -1507,6 +1565,8 @@
             if (rs) rs.textContent = '';
             disarmReset();
             updateLibraryCount();
+            const mp = document.getElementById('most-played');
+            if (mp && mp.open) renderMostPlayed();
             loadDevices();
         }
 
@@ -2244,7 +2304,7 @@
                     accessToken = null;
                     showLogin("Spotify session expired. Please reconnect.");
                 } else if (response.ok) {
-                    incrementPlayCount(uri);
+                    incrementPlayCount(uri, trackName);
                     updateNowPlaying(trackName);
                     closeTrackSelector();
                     return true;

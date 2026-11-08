@@ -40,6 +40,7 @@ LANDMARKS = {
     "TAG_COLORS": "tag colours",
     "az-bar": "A-Z jump bar in the song picker",
     "playOneUp": "1-Up (penalty over) button",
+    "play_counts_all_time": "all-time most played tracker",
     "pregame-btn-wild": "Wild pregame button",
     "pregame-btn-nighthawks": "Nighthawks pregame button",
 }
