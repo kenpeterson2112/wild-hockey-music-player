@@ -1,4 +1,4 @@
-# wild-hockey-music-player
+# Hockey Soundboard
 This app lets you select and play tracks quickly during a hockey game.
 
 
