@@ -39,7 +39,7 @@ LANDMARKS = {
     "QUEUE_SLOTS": "soundboard tiles",
     "TAG_COLORS": "tag colours",
     "az-bar": "A-Z jump bar in the song picker",
-    "playOneUp": "1-Up (penalty over) button",
+    "playOneUp": "1-Up sound player (button hidden for now, may return)",
     "playMushroom": "Super Mushroom button",
     "play_counts_all_time": "all-time most played tracker",
     "pregame-btn-wild": "Wild pregame button",
