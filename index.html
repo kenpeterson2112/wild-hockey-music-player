@@ -557,7 +557,6 @@
             <button id="pregame-btn-nighthawks" class="sound-btn" onclick="playPregame('nighthawks')" title="Nighthawks pregame">
                 <img src="icons/nighthawks-logo.png" alt="Nighthawks pregame">
             </button>
-            <button id="oneup-btn" class="sound-btn" onclick="playOneUp()" title="Penalty over: 1-Up sound"><img src="icons/one-up.png" alt="1-Up (penalty over)"></button>
             <button id="mushroom-btn" class="sound-btn" onclick="playMushroom()" title="Super Mushroom sound"><img src="icons/super-mushroom.png" alt="Super Mushroom"></button>
             <button class="settings-btn" onclick="openSettings()">⚙️</button>
         </div>
@@ -1989,6 +1988,8 @@
         let pregameChoice = 'wild';
 
         // --- 1-UP (penalty over): short sound on its own player so it never cuts off the pregame ---
+        // Its top-row button is removed for now; the sound, icon (icons/one-up.png) and this
+        // player are kept so the button can come back.
         const ONE_UP_URL = 'audio/one-up-v2.mp3';
         let oneUpElement = null;
         async function playOneUp() {
