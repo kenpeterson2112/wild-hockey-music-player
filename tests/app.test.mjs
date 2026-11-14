@@ -229,6 +229,22 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   }
 }
 
+// ================= Soundboard layout: two decks of four tiles
+{ const A='spotify:track:AAAAAAAAAAAAAAAAAAAAA1';
+  const {gid,run}=makeEnv({queue_slots:JSON.stringify({w2:{uri:A,name:'Song A'}})});
+  const decks=gid('queue-grid').children;
+  const pads=d=>d.children[1].children;
+  check('two decks: Between whistles and Game moments', decks.length===2 && decks[0].children[0].textContent==='Between whistles' && decks[1].children[0].textContent==='Game moments');
+  check('four tiles in each deck', pads(decks[0]).length===4 && pads(decks[1]).length===4);
+  const top=sl=>sl.children[0].children[0].children[0];
+  check('whistle tiles show their number', pads(decks[0]).map(sl=>top(sl).textContent).join('')==='1234' && top(pads(decks[0])[0]).className==='slot-num');
+  check('game-moment tiles show their name', pads(decks[1]).map(sl=>top(sl).textContent).join('|')==='Goal For|Goal Against|Power Play|Penalty Kill');
+  const w2=pads(decks[0])[1], w1=pads(decks[0])[0];
+  check('filled tile shows its song and a swap button; empty tile invites a pick', w2.children[0].children[1].textContent==='Song A' && w2.children.length===2 && w1.className.includes('empty') && w1.children[0].children[1].textContent==='+ Choose song');
+  run("activeSlotId='w2'; renderQueue()");
+  check('playing tile is marked active', pads(gid('queue-grid').children[0])[1].className.includes('active'));
+}
+
 // ================= All-time most played (survives game resets)
 { const {sb,gid,run,store}=makeEnv();
   const [s1,s2]=run('window.SONGS').slice(0,2);

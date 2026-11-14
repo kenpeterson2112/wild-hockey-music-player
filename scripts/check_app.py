@@ -37,6 +37,7 @@ LANDMARKS = {
     "track-modal-content": "fixed-size song picker",
     "chip-clear": "tag chip clear (X) button",
     "QUEUE_SLOTS": "soundboard tiles",
+    "QUEUE_DECKS": "two-deck soundboard layout (Between whistles / Game moments)",
     "TAG_COLORS": "tag colours",
     "az-bar": "A-Z jump bar in the song picker",
     "playOneUp": "1-Up sound player (button hidden for now, may return)",
