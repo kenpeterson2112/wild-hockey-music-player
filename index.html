@@ -14,8 +14,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: radial-gradient(circle at 50% 0%, #1a2036 0%, #0d0f16 60%);
-            color: white;
+            background: #0e1116;
+            color: #f4f6fa;
             margin: 0;
             padding: 10px;
             display: flex;
@@ -38,7 +38,7 @@
         /* --- Shared button base --- */
         button {
             border: none;
-            border-radius: 14px;
+            border-radius: 18px;
             font-weight: 700;
             color: white;
             cursor: pointer;
@@ -60,7 +60,7 @@
         /* Sound buttons: Wild pregame, Nighthawks pregame, 1-Up (penalty over), Super Mushroom */
         .sound-btn {
             flex: 1 1 0; min-width: 0; min-height: clamp(52px, 8vh, 74px); padding: 4px;
-            background: #23262e; border: 1px solid #333842;
+            background: #171b23;
             display: flex; align-items: center; justify-content: center;
         }
         .sound-btn img { max-height: clamp(44px, 7vh, 64px); max-width: 100%; object-fit: contain; }
@@ -68,7 +68,7 @@
         .sound-btn:active { filter: brightness(1.4); transform: scale(0.97); }
         .btn-full {
             flex: 1 1 auto;
-            background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
+            background: linear-gradient(135deg, #4fd98a 0%, #159a44 100%);
             padding: 16px;
             font-size: clamp(1rem, 3.2vw, 1.35rem);
             text-transform: uppercase;
@@ -87,14 +87,14 @@
         }
         .settings-btn {
             flex-shrink: 0;
-            background: #23262e;
-            font-size: 1.4rem;
+            background: #171b23;
+            color: #8b93a3;
             padding: 0 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #333842;
         }
+        .settings-btn svg { width: 26px; height: 26px; display: block; }
         .sync-btn:disabled { opacity: 0.3; cursor: default; }
         .clear-songs-btn { margin-top: 0; font-size: 1rem; }
         .clear-songs-btn:disabled { opacity: 0.35; cursor: default; }
@@ -111,153 +111,127 @@
         }
         @keyframes blink { 50% { opacity: 0.3; } }
 
-        /* --- Sound grid --- */
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-auto-rows: 1fr;
-            gap: 8px;
-            flex: 1 1 auto;
-            min-height: 0;
+        /* --- Soundboard: two decks (Between whistles, Game moments). Each deck is one rounded
+           pad split into four tiles. A tile is tinted in its own colour and turns fully
+           bright while its song is playing. --- */
+        .grid { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-height: 0; }
+        .deck { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 5px; }
+        .deck-head { font-size: 0.66rem; font-weight: 650; letter-spacing: 1.2px; text-transform: uppercase; color: #8b93a3; padding-left: 6px; flex-shrink: 0; }
+        .deck-pads {
+            flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 3px;
+            border-radius: 22px; overflow: hidden;
         }
+        .slot { position: relative; min-height: 0; min-width: 0; display: flex; --h: #b7a6ff; --t: #232737; }
+        .slot.accent-purple { --h: #b7a6ff; --t: #232737; }
+        .slot.accent-green  { --h: #4fd98a; --t: #11311f; }
+        .slot.accent-red    { --h: #ff7c8c; --t: #3b161e; }
+        .slot.accent-blue   { --h: #6fa9ff; --t: #13274b; }
+        .slot.accent-amber  { --h: #ffc04a; --t: #3a2b0d; }
+        .slot.accent-orange { --h: #ff9a62; --t: #3d2012; }
         .btn-grid {
-            background: #23262e;
-            border: 1px solid #333842;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            text-align: center;
-            padding: 6px;
-            font-size: clamp(0.85rem, 2.4vw, 1.15rem);
-            min-height: 0;
-            position: relative;
-            overflow: hidden;
+            flex: 1 1 auto; width: 100%; min-height: 0; min-width: 0;
+            background: var(--t); border-radius: 4px; color: #f4f6fa;
+            display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+            text-align: left; padding: 12px 40px 12px 14px; overflow: hidden;
         }
-        .btn-grid::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: var(--accent, #555);
-        }
-        .slot { position: relative; min-height: 0; display: flex; }
-        .slot .btn-grid { flex: 1 1 auto; width: 100%; padding: 6px 30px 6px 8px; }
-        .slot-cat { font-size: 0.68rem; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad; font-weight: 600; }
+        .slot-top { display: flex; align-items: center; gap: 8px; min-height: 1.6rem; }
+        .slot-cat { font-size: 0.74rem; font-weight: 650; letter-spacing: 0.2px; color: var(--h); }
+        .slot-num { font-size: 1.55rem; font-weight: 700; line-height: 1; color: var(--h); opacity: 0.6; }
         .slot-song {
-            font-size: clamp(0.95rem, 3vw, 1.2rem); line-height: 1.15; font-weight: 700;
+            font-size: clamp(1rem, 3.2vw, 1.25rem); line-height: 1.15; font-weight: 700;
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
             max-width: 100%; word-break: break-word;
         }
-        .slot.empty .btn-grid { border-style: dashed; }
-        .slot.active .btn-grid {
-            background: #2d3342; /* fallback where color-mix is unsupported */
-            background: color-mix(in srgb, var(--accent, #555) 30%, #23262e);
-            border-color: var(--accent, #555);
-            box-shadow: 0 0 0 2px var(--accent, #555), 0 0 22px 2px var(--accent, #555);
-        }
-        .slot.active .btn-grid::before { height: 6px; }
-        .slot.active .slot-cat { color: #fff; }
-        .slot.active .slot-song { color: #fff; }
-        .slot.empty .slot-song { color: #8a8f9c; font-weight: 600; }
+        .slot.empty .btn-grid { background: #1a1d26; background: color-mix(in srgb, var(--t) 45%, #0e1116); }
+        .slot.empty .slot-song { color: #8b93a3; font-weight: 600; }
+        /* Playing: the whole tile goes bright, with dark text and moving bars */
+        .slot.active .btn-grid { background: var(--h); color: #0b0e13; }
+        .slot.active .slot-cat { color: #0b0e13; }
+        .slot.active .slot-num { color: #0b0e13; opacity: 1; }
+        .slot-eq { display: none; gap: 3px; align-items: flex-end; height: 14px; }
+        .slot.active .slot-eq { display: flex; }
+        .slot-eq i { width: 4px; height: 100%; border-radius: 2px; background: currentColor; transform-origin: bottom; animation: eq 0.9s ease-in-out infinite alternate; }
+        .slot-eq i:nth-child(2) { animation-delay: -0.3s; }
+        .slot-eq i:nth-child(3) { animation-delay: -0.6s; }
+        @keyframes eq { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
+        @media (prefers-reduced-motion: reduce) { .slot-eq i { animation: none; } .slot-eq i:nth-child(2) { transform: scaleY(0.55); } }
         .slot-edit {
-            position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; padding: 0;
-            border-radius: 10px; background: #2c313d; border: 1px solid #3a4150; font-size: 1rem;
+            position: absolute; top: 0; right: 0; width: 44px; height: 44px; padding: 0;
+            background: none; color: #f4f6fa; opacity: 0.5; font-size: 1.05rem;
             display: flex; align-items: center; justify-content: center; z-index: 2;
         }
-        .btn-grid .emoji {
-            font-size: clamp(1.3rem, 5vw, 2rem);
-            line-height: 1;
-        }
-        .btn-grid.accent-green  { --accent: #1DB954; }
-        .btn-grid.accent-red    { --accent: #e0455e; }
-        .btn-grid.accent-blue   { --accent: #3b82f6; }
-        .btn-grid.accent-amber  { --accent: #f59e0b; }
-        .btn-grid.accent-purple { --accent: #a855f7; }
-        .btn-grid.accent-orange { --accent: #fb7139; }
+        .slot.active .slot-edit { color: #0b0e13; opacity: 0.6; }
 
-        /* --- Now playing --- */
+        /* --- Now playing: one quiet line; only the No Spotify warning gets a box --- */
         .now-playing {
             flex-shrink: 0;
-            border-radius: 14px;
-            padding: 12px 16px;
+            border-radius: 18px;
+            padding: 4px 8px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            min-height: 62px;
-            background: #1b2340;
-            border: 1px solid #2a3a6b;
-            transition: background 0.3s, border-color 0.3s;
-        }
-        .now-playing.playing {
-            background: linear-gradient(135deg, #1e40af 0%, #2547c9 100%);
-            border-color: #4f7cff;
+            gap: 10px;
+            min-height: 32px;
         }
         .now-playing.no-spotify {
-            background: linear-gradient(135deg, #7f1d2b 0%, #b3263c 100%);
-            border-color: #e0455e;
+            background: #7a1b28;
             justify-content: center;
             cursor: pointer;
+            min-height: 58px;
+            padding: 10px 16px;
         }
         .now-playing.no-spotify .np-dot, .now-playing.no-spotify .np-text { display: none; }
         .np-nospotify { display: none; color: #fff; font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px; text-align: center; }
         .np-nospotify small { display: block; font-size: 0.72rem; font-weight: 600; opacity: 0.85; letter-spacing: 0; }
         .now-playing.no-spotify .np-nospotify { display: block; }
         .np-dot {
-            width: 12px;
-            height: 12px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
-            background: #6b7db3;
+            background: #8b93a3;
             flex-shrink: 0;
         }
         .now-playing.playing .np-dot {
-            background: #7dd3fc;
-            box-shadow: 0 0 0 0 rgba(125,211,252,0.7);
+            background: #4fd98a;
+            box-shadow: 0 0 0 0 rgba(79,217,138,0.7);
             animation: pulse 1.4s infinite;
         }
         @keyframes pulse {
-            0%   { box-shadow: 0 0 0 0 rgba(125,211,252,0.6); }
-            70%  { box-shadow: 0 0 0 10px rgba(125,211,252,0); }
-            100% { box-shadow: 0 0 0 0 rgba(125,211,252,0); }
+            0%   { box-shadow: 0 0 0 0 rgba(79,217,138,0.6); }
+            70%  { box-shadow: 0 0 0 9px rgba(79,217,138,0); }
+            100% { box-shadow: 0 0 0 0 rgba(79,217,138,0); }
         }
-        .np-text { min-width: 0; }
-        .now-playing-label {
-            font-size: 0.7rem;
-            color: #9db0e0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
+        .np-text { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+        .now-playing-label { font-size: 0.85rem; color: #8b93a3; flex-shrink: 0; }
         .now-playing-track {
-            font-size: clamp(0.95rem, 2.4vw, 1.15rem);
-            color: white;
-            font-weight: 600;
-            margin-top: 2px;
+            font-size: 0.95rem;
+            color: #8b93a3;
+            font-weight: 650;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .now-playing.playing .now-playing-track { color: #f4f6fa; }
 
         /* --- Stop --- */
         .btn-stop {
             flex-shrink: 0;
-            background: linear-gradient(135deg, #e02424 0%, #b81c1c 100%);
+            background: #e5484d;
+            border-radius: 22px;
             padding: 18px;
-            font-size: clamp(1.2rem, 4vw, 1.7rem);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: clamp(1.2rem, 4vw, 1.6rem);
+            font-weight: 750;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 12px;
             min-height: clamp(58px, 9vh, 90px);
-            box-shadow: 0 4px 14px rgba(224,36,36,0.3);
         }
+        .btn-stop .stop-sq { width: 0.8em; height: 0.8em; border-radius: 0.18em; background: currentColor; }
 
         /* --- Login --- */
         .btn-login {
-            background: linear-gradient(135deg, #1DB954 0%, #159a44 100%);
+            background: #4fd98a;
+            color: #0b0e13;
             padding: 20px;
             border-radius: 50px;
             width: 100%;
@@ -277,31 +251,30 @@
             padding: 20px;
         }
         .modal-content {
-            background: #16181f;
+            background: #12151c;
             width: 100%;
             max-width: 460px;
-            border-radius: 18px;
+            border-radius: 26px;
             display: flex;
             flex-direction: column;
             max-height: 80vh;
-            border: 1px solid #2a2e38;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 20px;
-            border-bottom: 1px solid #2a2e38;
+            padding: 18px 20px 12px;
         }
         .modal-title {
             font-size: 1.25rem;
             font-weight: 700;
-            color: #1DB954;
+            color: #f4f6fa;
         }
         .modal-close {
             background: none;
-            color: #aaa;
+            color: #8b93a3;
             font-size: 1.5rem;
             padding: 0;
             width: 32px;
@@ -323,17 +296,17 @@
             display: flex; flex-direction: column; justify-content: space-between; align-items: center;
             touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
         }
-        .az-bar span { flex: 1; display: flex; align-items: center; font-size: 0.62rem; font-weight: 700; color: #9aa0ad; line-height: 1; }
+        .az-bar span { flex: 1; display: flex; align-items: center; font-size: 0.62rem; font-weight: 700; color: #8b93a3; line-height: 1; }
         .az-bar span.off { opacity: 0.25; }
         .az-bar.touching { background: rgba(255,255,255,0.05); border-radius: 18px; }
         .az-pop {
             position: absolute; right: 48px; top: 50%; transform: translateY(-50%);
-            width: 56px; height: 56px; border-radius: 14px; background: #1DB954; color: #07210f;
+            width: 56px; height: 56px; border-radius: 18px; background: #4fd98a; color: #0b0e13;
             font-size: 1.8rem; font-weight: 800; display: none; align-items: center; justify-content: center;
             pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
         }
         .az-pop.show { display: flex; }
-        .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+        .picker-filters { padding: 2px 12px 2px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
         .picker-filters .tag-chips { flex: 1 1 auto; min-width: 0; }
         /* Two rows of chips that still slide sideways; the most-used tags fill the first columns, Goal For and Power Play the last */
         .tag-chips {
@@ -341,7 +314,7 @@
             gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch;
         }
         .chip {
-            flex-shrink: 0; background: #23262e; border: 1px solid #333842; color: #c9ccd4;
+            flex-shrink: 0; background: #1f2430; border: 1px solid transparent; color: #c9ccd4;
             border-radius: 999px; padding: 7px 12px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;
             box-shadow: none;
         }
@@ -349,29 +322,30 @@
         .chip-clear { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; margin-bottom: 8px; }
         /* The clear button keeps its spot on the right even when hidden, so chips never shift */
         .chip-clear.off { visibility: hidden; }
-        .chip.active { background: #1DB954; border-color: #1DB954; color: #07210f; }
+        .chip.active { background: #4fd98a; border-color: #4fd98a; color: #0b0e13; }
         /* Tag colours: the same palette as the queue tiles (Goal For green, Goal Against red,
            Power Play blue, Penalty Kill amber, End Game orange, Puck Drop purple, Wild in the team's
            navy, green and white, Intermission red, white and blue, Banger electric cyan).
            Other tags stay neutral. */
-        .tc-green  { --tc: #1DB954; }
-        .tc-red    { --tc: #e0455e; }
-        .tc-blue   { --tc: #3b82f6; }
-        .tc-amber  { --tc: #f59e0b; }
-        .tc-orange { --tc: #fb7139; }
-        .tc-purple { --tc: #a855f7; }
+        .tc-green  { --tc: #4fd98a; }
+        .tc-red    { --tc: #ff7c8c; }
+        .tc-blue   { --tc: #6fa9ff; }
+        .tc-amber  { --tc: #ffc04a; }
+        .tc-orange { --tc: #ff9a62; }
+        .tc-purple { --tc: #b7a6ff; }
         .tc-wild   { --tc: #22c55e; }
         .tc-rwb    { --tc: #e0455e; }
         .tc-cyan   { --tc: #22d3ee; }
         .tc-pumpkin { --tc: #fb7139; }
-        .chip[class*="tc-"] { border-color: var(--tc); color: var(--tc); }
+        /* A coloured chip is a soft tint of its colour with no outline; selected, it goes solid */
+        .chip[class*="tc-"] { background: #1f2430; background: color-mix(in srgb, var(--tc) 20%, #12151c); color: var(--tc); }
         .chip[class*="tc-"].active { background: var(--tc); border-color: var(--tc); color: #0b0d12; }
         .tag-pills { display: flex; flex-wrap: nowrap; gap: 5px; flex-shrink: 0; }
         .tag-pill.short { min-width: 34px; text-align: center; letter-spacing: 0.3px; }
         .tag-pill {
             font-size: 0.7rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px;
-            color: var(--tc, #8a8f9c); border: 1px solid var(--tc, #8a8f9c);
-            background: #20232c; background: color-mix(in srgb, var(--tc, #8a8f9c) 16%, #20232c);
+            color: var(--tc, #8b93a3); border: 1px solid transparent;
+            background: #232737; background: color-mix(in srgb, var(--tc, #8b93a3) 20%, #171b23);
         }
         /* Wild: team colours from the West Northumberland Wild logo (navy, bright green, white) */
         .chip.tc-wild, .tag-pill.tc-wild { background: #13295e; border-color: #22c55e; color: #fff; }
@@ -391,15 +365,14 @@
             display: flex; align-items: center; gap: 10px; margin: 18px 2px 6px;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9aa0ad;
         }
-        .list-divider::before, .list-divider::after { content: ""; flex: 1; height: 1px; background: #3a4150; }
+        .list-divider::before, .list-divider::after { content: ""; flex: 1; height: 1px; background: #2a2f3b; }
         .list-divider .n { font-weight: 500; opacity: 0.7; }
         .track-item.dim { opacity: 0.72; }
         .track-item {
-            background: #20232c;
-            border: 2px solid #2c313d;
-            border-radius: 12px;
+            background: #171b23;
+            border-radius: 16px;
             padding: 15px;
-            margin: 8px 0;
+            margin: 6px 0;
             cursor: pointer;
             transition: all 0.15s;
             display: flex;
@@ -408,8 +381,8 @@
             gap: 12px;
         }
         .track-item:active {
-            background: #1DB954;
-            border-color: #1DB954;
+            background: #4fd98a;
+            color: #0b0e13;
             transform: scale(0.98);
         }
         /* Every song row is the same height: name and tag pills share one line (long
@@ -429,8 +402,8 @@
         }
         .play-count {
             flex-shrink: 0;
-            background: #2c313d;
-            color: #9db0e0;
+            background: #232737;
+            color: #b7a6ff;
             font-weight: 700;
             font-size: 0.95rem;
             padding: 5px 12px;
@@ -439,16 +412,15 @@
         .settings-btn-action {
             width: 100%;
             padding: 12px;
-            background: #2c313d;
-            border: 1px solid #3a4150;
-            border-radius: 8px;
-            color: white;
+            background: #1f2430;
+            border-radius: 14px;
+            color: #f4f6fa;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
         }
         .settings-btn-action:active { filter: brightness(1.25); }
-        .settings-body { padding: 16px 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+        .settings-body { padding: 6px 20px 16px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
         .settings-section { margin-bottom: 18px; }
         .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .settings-section .settings-grid .settings-btn-action { margin-top: 0; padding: 14px 8px; font-size: 0.9rem; }
@@ -456,36 +428,37 @@
         .clear-hint { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .clear-opt {
             width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 14px; text-align: left;
-            background: #20232c; border: 2px solid #e0455e; border-radius: 12px; padding: 14px; margin-bottom: 10px;
+            background: #3b161e; border-radius: 16px; padding: 14px; margin-bottom: 10px;
             color: #fff; font-family: inherit; font-size: 1rem;
         }
-        .clear-opt:active { background: #3a1f27; }
+        .clear-opt:active { background: #52202b; }
         .clear-opt .clear-text { display: flex; flex-direction: column; gap: 3px; }
-        .clear-opt .clear-text span { font-size: 0.8rem; color: #8a8f9c; }
+        .clear-opt .clear-text span { font-size: 0.8rem; color: #ffb3bc; }
         .clear-opt .clear-icon { flex-shrink: 0; font-size: 1.3rem; }
-        .clear-opt:disabled { opacity: 0.35; border-color: #2c313d; cursor: default; }
-        .settings-more { border-top: 1px solid #2a2e38; padding: 12px 0 4px; }
+        .clear-opt:disabled { opacity: 0.4; background: #171b23; cursor: default; }
+        .clear-opt:disabled .clear-text span { color: #8b93a3; }
+        .settings-more { border-top: 1px solid #232833; padding: 12px 0 4px; }
         .settings-more summary { cursor: pointer; font-weight: 700; color: #c9ccd4; font-size: 0.95rem; }
-        .settings-more[open] summary { margin-bottom: 10px; color: #1DB954; }
+        .settings-more[open] summary { margin-bottom: 10px; color: #f4f6fa; }
         .settings-more p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
-        .settings-more input[type="file"] { width: 100%; padding: 11px; background: #20232c; border: 1px solid #2c313d; border-radius: 8px; color: white; font-family: inherit; margin-top: 8px; }
+        .settings-more input[type="file"] { width: 100%; padding: 11px; background: #171b23; border: 0; border-radius: 12px; color: white; font-family: inherit; margin-top: 8px; }
         .settings-more .settings-btn-action { margin-top: 8px; }
         .most-played-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
         .most-played-list li { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid #23262f; font-size: 0.9rem; }
         .most-played-list .mp-rank { color: #8a8f9c; min-width: 1.8em; text-align: right; font-variant-numeric: tabular-nums; }
         .most-played-list .mp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .most-played-list .mp-n { color: #1DB954; font-weight: 700; font-variant-numeric: tabular-nums; }
-        .settings-section h3 { margin: 0 0 6px 0; color: #1DB954; font-size: 1rem; }
+        .most-played-list .mp-n { color: #4fd98a; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .settings-section h3 { margin: 0 0 6px 0; color: #f4f6fa; font-size: 1rem; }
         .settings-section p { margin: 0 0 12px 0; font-size: 0.85rem; color: #8a8f9c; }
         .settings-section input[type="file"],
         .settings-section input[type="text"],
         .settings-section select {
             width: 100%;
             padding: 11px;
-            background: #20232c;
-            border: 1px solid #2c313d;
-            border-radius: 8px;
-            color: white;
+            background: #171b23;
+            border: 0;
+            border-radius: 12px;
+            color: #f4f6fa;
             font-family: inherit;
         }
         .settings-section input + input,
@@ -497,10 +470,9 @@
         .tag-picker .chip { padding: 9px 14px; font-size: 0.9rem; }
         .track-remove {
             flex-shrink: 0;
-            background: #3a2c31;
-            border: 1px solid #5a2c34;
-            color: #ff8da0;
-            border-radius: 8px;
+            background: #3b161e;
+            color: #ff7c8c;
+            border-radius: 12px;
             width: 34px;
             height: 34px;
             font-size: 1rem;
@@ -517,9 +489,8 @@
             gap: 8px;
         }
         .device-item {
-            background: #20232c;
-            border: 2px solid #2c313d;
-            border-radius: 10px;
+            background: #171b23;
+            border-radius: 14px;
             padding: 12px 14px;
             margin: 6px 0;
             cursor: pointer;
@@ -529,12 +500,12 @@
             gap: 10px;
         }
         .device-item.selected {
-            border-color: #1DB954;
-            background: #14351f;
+            background: #11311f;
+            color: #4fd98a;
         }
         .device-item .device-name { font-weight: 700; }
         .device-item .device-meta { font-size: 0.78rem; color: #8a8f9c; margin-top: 2px; }
-        .device-check { color: #1DB954; font-weight: 700; flex-shrink: 0; }
+        .device-check { color: #4fd98a; font-weight: 700; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -558,7 +529,7 @@
                 <img src="icons/nighthawks-logo.png" alt="Nighthawks pregame">
             </button>
             <button id="mushroom-btn" class="sound-btn" onclick="playMushroom()" title="Super Mushroom sound"><img src="icons/super-mushroom.png" alt="Super Mushroom"></button>
-            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            <button class="settings-btn" onclick="openSettings()" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
         </div>
 
         <div class="grid" id="queue-grid"></div>
@@ -567,12 +538,12 @@
             <div class="np-nospotify">No Spotify<small>Tap to choose a device</small></div>
             <div class="np-dot"></div>
             <div class="np-text">
-                <div class="now-playing-label">Now Playing</div>
+                <div class="now-playing-label">Now playing</div>
                 <div id="now-playing-track" class="now-playing-track">Nothing</div>
             </div>
         </div>
 
-        <button class="btn-stop" onclick="stopMusic()">🛑 Stop Music</button>
+        <button class="btn-stop" onclick="stopMusic()"><span class="stop-sq"></span>Stop</button>
     </div>
 
     <div id="track-modal" class="modal" style="display: none;">
@@ -1040,9 +1011,9 @@
             if (bar) bar.classList.toggle('no-spotify', state === 'expired');
             const txt = document.getElementById('spotify-conn-status');
             if (txt) {
-                if (state === 'connected') { txt.textContent = '✓ Connected'; txt.style.color = '#1DB954'; }
+                if (state === 'connected') { txt.textContent = '✓ Connected'; txt.style.color = '#4fd98a'; }
                 else if (state === 'refreshing') { txt.textContent = 'Reconnecting…'; txt.style.color = '#f59e0b'; }
-                else { txt.textContent = 'Disconnected — tap to reconnect'; txt.style.color = '#e0455e'; }
+                else { txt.textContent = 'Disconnected — tap to reconnect'; txt.style.color = '#ff7c8c'; }
             }
         }
 
@@ -1180,7 +1151,7 @@
             lsSet('play_counts', JSON.stringify(playCounts));
             updateClearBtn();
             const el = document.getElementById('reset-status');
-            if (el) { el.textContent = '✓ Play counts reset to zero'; el.style.color = '#1DB954'; }
+            if (el) { el.textContent = '✓ Play counts reset to zero'; el.style.color = '#4fd98a'; }
         }
 
         // --- TAGS ---
@@ -1368,7 +1339,7 @@
 
         function addCustomTrack() {
             const status = document.getElementById('custom-add-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
 
             const uri = parseSpotifyTrackId(document.getElementById('custom-link-input').value);
             const name = document.getElementById('custom-name-input').value.trim();
@@ -1424,7 +1395,7 @@
 
         function exportCustomTracks() {
             const status = document.getElementById('import-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
             try {
                 const blob = new Blob([buildExportJson()], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -1461,7 +1432,7 @@
 
         function handleImportFileSelect() {
             const status = document.getElementById('import-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
             const input = document.getElementById('import-file-input');
             const file = input.files[0];
             pendingImport = null;
@@ -1483,7 +1454,7 @@
 
         function applyImport(mode) {
             const status = document.getElementById('import-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
             if (!pendingImport) return setStatus('Pick a file to import first.', false);
 
             let added = 0, skipped = 0;
@@ -1528,7 +1499,7 @@
 
         function resetOnDeviceSongs() {
             const status = document.getElementById('library-reset-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
             const btn = document.getElementById('reset-ondevice-btn');
             const n = customTrackCount();
 
@@ -1874,15 +1845,21 @@
         // stays on the tile and the tile glows while it is the one playing. Stop
         // Music is what clears that tile. Tap an empty slot to choose a song; the
         // pencil swaps one.
+        // Two decks of four tiles. Whistle tiles show their number; game-moment tiles show
+        // their name in their own colour.
+        const QUEUE_DECKS = [
+            { id: 'whistle', label: 'Between whistles' },
+            { id: 'moment',  label: 'Game moments' }
+        ];
         const QUEUE_SLOTS = [
-            { id: 'w1', label: 'Whistle 1',    emoji: '🎵', accent: 'purple' },
-            { id: 'w2', label: 'Whistle 2',    emoji: '🎵', accent: 'purple' },
-            { id: 'w3', label: 'Whistle 3',    emoji: '🎵', accent: 'purple' },
-            { id: 'w4', label: 'Whistle 4',    emoji: '🎵', accent: 'purple' },
-            { id: 'gf', label: 'Goal For',     emoji: '🚨', accent: 'green' },
-            { id: 'ga', label: 'Goal Against', emoji: '🥅', accent: 'red' },
-            { id: 'pp', label: 'Power Play',   emoji: '💪', accent: 'blue' },
-            { id: 'pk', label: 'Penalty Kill', emoji: '⚠️', accent: 'amber' }
+            { id: 'w1', label: 'Whistle 1',    deck: 'whistle', num: '1', accent: 'purple' },
+            { id: 'w2', label: 'Whistle 2',    deck: 'whistle', num: '2', accent: 'purple' },
+            { id: 'w3', label: 'Whistle 3',    deck: 'whistle', num: '3', accent: 'purple' },
+            { id: 'w4', label: 'Whistle 4',    deck: 'whistle', num: '4', accent: 'purple' },
+            { id: 'gf', label: 'Goal For',     deck: 'moment', accent: 'green' },
+            { id: 'ga', label: 'Goal Against', deck: 'moment', accent: 'red' },
+            { id: 'pp', label: 'Power Play',   deck: 'moment', accent: 'blue' },
+            { id: 'pk', label: 'Penalty Kill', deck: 'moment', accent: 'amber' }
         ];
         let queueState = {};
         try { queueState = JSON.parse(lsGet('queue_slots') || '{}') || {}; } catch (e) { queueState = {}; }
@@ -1897,31 +1874,45 @@
             const grid = document.getElementById('queue-grid');
             if (!grid) return;
             grid.innerHTML = '';
-            QUEUE_SLOTS.forEach((slot) => {
-                const entry = queueState[slot.id];
-                const wrap = document.createElement('div');
-                const isActive = !!entry && activeSlotId === slot.id;
-                wrap.className = 'slot' + (entry ? '' : ' empty') + (isActive ? ' active' : '');
+            QUEUE_DECKS.forEach((deck) => {
+                const deckEl = document.createElement('div'); deckEl.className = 'deck';
+                const head = document.createElement('div'); head.className = 'deck-head'; head.textContent = deck.label;
+                const pads = document.createElement('div'); pads.className = 'deck-pads';
+                deckEl.appendChild(head); deckEl.appendChild(pads);
+                grid.appendChild(deckEl);
 
-                const main = document.createElement('button');
-                main.className = 'btn-grid accent-' + slot.accent;
-                const emoji = document.createElement('span'); emoji.className = 'emoji'; emoji.textContent = slot.emoji;
-                const cat = document.createElement('span'); cat.className = 'slot-cat'; cat.textContent = (isActive ? '▶ ' : '') + slot.label;
-                const song = document.createElement('span'); song.className = 'slot-song';
-                song.textContent = entry ? entry.name : '+ Choose song';
-                main.appendChild(emoji); main.appendChild(cat); main.appendChild(song);
-                main.onclick = () => (entry ? playSlot(slot.id) : editSlot(slot.id));
-                wrap.appendChild(main);
+                QUEUE_SLOTS.filter(slot => slot.deck === deck.id).forEach((slot) => {
+                    const entry = queueState[slot.id];
+                    const wrap = document.createElement('div');
+                    const isActive = !!entry && activeSlotId === slot.id;
+                    wrap.className = 'slot accent-' + slot.accent + (entry ? '' : ' empty') + (isActive ? ' active' : '');
 
-                if (entry) {
-                    const edit = document.createElement('button');
-                    edit.className = 'slot-edit';
-                    edit.textContent = '✎';
-                    edit.title = 'Swap this song';
-                    edit.onclick = (e) => { e.stopPropagation(); editSlot(slot.id); };
-                    wrap.appendChild(edit);
-                }
-                grid.appendChild(wrap);
+                    const main = document.createElement('button');
+                    main.className = 'btn-grid';
+                    main.title = slot.label;
+                    const top = document.createElement('span'); top.className = 'slot-top';
+                    const tag = document.createElement('span');
+                    tag.className = slot.num ? 'slot-num' : 'slot-cat';
+                    tag.textContent = slot.num || slot.label;
+                    const eq = document.createElement('span'); eq.className = 'slot-eq';
+                    for (let i = 0; i < 3; i++) eq.appendChild(document.createElement('i'));
+                    top.appendChild(tag); top.appendChild(eq);
+                    const song = document.createElement('span'); song.className = 'slot-song';
+                    song.textContent = entry ? entry.name : '+ Choose song';
+                    main.appendChild(top); main.appendChild(song);
+                    main.onclick = () => (entry ? playSlot(slot.id) : editSlot(slot.id));
+                    wrap.appendChild(main);
+
+                    if (entry) {
+                        const edit = document.createElement('button');
+                        edit.className = 'slot-edit';
+                        edit.textContent = '✎';
+                        edit.title = 'Swap this song';
+                        edit.onclick = (e) => { e.stopPropagation(); editSlot(slot.id); };
+                        wrap.appendChild(edit);
+                    }
+                    pads.appendChild(wrap);
+                });
             });
             updateClearBtn(); // any change to the tiles can change whether there's something to clear
         }
@@ -2056,11 +2047,11 @@
                 for (const req of keys) {
                     if (!BUILTIN_AUDIO_URLS.some(u => req.url.endsWith(u))) await cache.delete(req);
                 }
-                if (verbose) setCacheStatus('✓ Saved on this phone — plays with no signal.', '#1DB954');
+                if (verbose) setCacheStatus('✓ Saved on this phone — plays with no signal.', '#4fd98a');
                 return true;
             } catch (err) {
                 console.error('Could not cache the pregame announcement:', err);
-                if (verbose) setCacheStatus('Could not save it (no signal?). Try again with a connection.', '#e0455e');
+                if (verbose) setCacheStatus('Could not save it (no signal?). Try again with a connection.', '#ff7c8c');
                 return false;
             }
         }
@@ -2071,7 +2062,7 @@
                 const cache = await caches.open(PREGAME_CACHE);
                 let saved = true;
                 for (const url of BUILTIN_AUDIO_URLS) { if (!(await cache.match(url))) saved = false; }
-                setCacheStatus(saved ? '✓ Saved on this phone — plays with no signal.' : 'Not saved on this phone yet.', saved ? '#1DB954' : '#f59e0b');
+                setCacheStatus(saved ? '✓ Saved on this phone — plays with no signal.' : 'Not saved on this phone yet.', saved ? '#4fd98a' : '#f59e0b');
             } catch (err) { /* status only */ }
         }
 
@@ -2112,7 +2103,7 @@
 
         async function loadDevices() {
             const status = document.getElementById('device-status');
-            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#1DB954' : '#e0455e'; } };
+            const setStatus = (msg, ok) => { if (status) { status.textContent = msg; status.style.color = ok ? '#4fd98a' : '#ff7c8c'; } };
             if (!accessToken) return setStatus('Connect to Spotify first.', false);
             await ensureFreshToken();
             try {
@@ -2205,7 +2196,7 @@
                 status.textContent = selectedDeviceId
                     ? ('✓ Pinned to: ' + selectedDeviceName)
                     : '✓ Using whatever device is active.';
-                status.style.color = '#1DB954';
+                status.style.color = '#4fd98a';
             }
             renderDevices(lastDevices); // re-render so the ✓ moves cleanly
         }
