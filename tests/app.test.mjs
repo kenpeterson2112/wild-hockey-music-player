@@ -28,7 +28,8 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   const songs=sb.buildSongList();
   const N=repo.length;
   const counts=new Map(); repo.forEach(s=>(s.tags||[]).forEach(t=>counts.set(t,(counts.get(t)||0)+1)));
-  const byCount=[...counts.keys()].sort((a,b)=>(counts.get(b)-counts.get(a))||a.localeCompare(b));
+  const LAST=['Goal For','Power Play']; // pinned to the far right of the chips
+  const byCount=[...counts.keys()].sort((a,b)=>(LAST.indexOf(a)-LAST.indexOf(b))||(counts.get(b)-counts.get(a))||a.localeCompare(b));
   const tagged=songs.filter(s=>s.tags.size>0);
   check('every repo song loads', songs.length===N, songs.length+' of '+N);
   check('tagged + untagged add up', tagged.length===repo.filter(s=>(s.tags||[]).length).length);
@@ -37,7 +38,7 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   run("openTrackSelector('Choose: Whistle 1')");
   const chips=run("document.getElementById('tag-chips').children").map(chipTxt);
   const LBL1=run('TAG_LABEL'); const shown=t=>LBL1[t.toLowerCase()]||t;
-  check('chips: no All chip, no X yet, tags by song count', chips.join(' | ')===byCount.map(t=>shown(t)+counts.get(t)).join(' | '), chips.join(' | '));
+  check('chips: no All chip, no X yet, tags by song count, Goal For + Power Play last', chips.join(' | ')===byCount.map(t=>shown(t)+counts.get(t)).join(' | '), chips.join(' | '));
   check('no Between Whistles chip', !chips.some(c=>/whistle/i.test(c)));
   const rows=()=>run("document.getElementById('track-list').children.filter(r=>r.className!=='list-divider').length");
   const hasX=()=>!run("document.getElementById('chip-clear-btn').className").includes('off');
