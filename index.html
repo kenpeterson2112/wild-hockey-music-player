@@ -335,7 +335,7 @@
         .az-pop.show { display: flex; }
         .picker-filters { padding: 10px 12px 2px; border-bottom: 1px solid #2a2e38; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
         .picker-filters .tag-chips { flex: 1 1 auto; min-width: 0; }
-        /* Two rows of chips that still slide sideways; the most-used tags fill the first columns */
+        /* Two rows of chips that still slide sideways; the most-used tags fill the first columns, Goal For and Power Play the last */
         .tag-chips {
             display: grid; grid-template-rows: repeat(2, auto); grid-auto-flow: column; grid-auto-columns: max-content;
             gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch;
@@ -802,7 +802,7 @@
             { uri: 'spotify:track:0DwJLxFUEBGr6jyIBaymlF', name: 'I Run', startSec: 28 },
             { uri: 'spotify:track:37ZJ0p5Jm13JPevGcx4SkF', name: "Livin' on a Prayer", startSec: 93 },
             { uri: 'spotify:track:49wOjOkS4pBK3PQnPnNYjb', name: 'Zombie WRENN', startSec: 186, tags: ['Goal For'] },
-            { uri: 'spotify:track:3BovdzfaX4jb5KFQwoPfAw', name: 'Beat It', startSec: 63, tags: ['Halloween'] },
+            { uri: 'spotify:track:3BovdzfaX4jb5KFQwoPfAw', name: 'Beat It', startSec: 63 },
             { uri: 'spotify:track:0OhRzvfoqTLkWGE0J2mWh2', name: 'Go Go Girl', startSec: 124.9, tags: ['Goal For'] },
             { uri: 'spotify:track:3IITulnaPefCg6buu079oy', name: 'Girls Rule', startSec: 50.2 },
             { uri: 'spotify:track:7oAZVxmRCVFanxK7tk16vv', name: 'Bring Em Out', startSec: 83.3 },
@@ -1639,10 +1639,14 @@
             document.getElementById('track-modal').style.display = 'flex';
         }
 
+        // Tag ids pinned to the far right of the filter chips, in this order.
+        const CHIPS_LAST = ['goal for', 'power play'];
+
         function renderSongPicker() {
             const songs = buildSongList();
 
-            // --- tag chips: every tag, the ones on the most songs first (✕ on the right while filtering)
+            // --- tag chips: every tag, the ones on the most songs first, except Goal For and
+            // Power Play, which always sit in the last (far right) column (✕ on the right while filtering)
             const counts = new Map(); // tag id -> number of songs
             const names = new Map();  // tag id -> display name
             songs.forEach(sg => sg.tags.forEach((disp, id) => {
@@ -1650,7 +1654,8 @@
                 names.set(id, disp);
             }));
             const chipTags = Array.from(counts.keys())
-                .sort((a, b) => (counts.get(b) - counts.get(a)) || names.get(a).localeCompare(names.get(b)));
+                .sort((a, b) => (CHIPS_LAST.indexOf(a) - CHIPS_LAST.indexOf(b))
+                    || (counts.get(b) - counts.get(a)) || names.get(a).localeCompare(names.get(b)));
 
             const chips = document.getElementById('tag-chips');
             chips.innerHTML = '';
