@@ -245,6 +245,38 @@ let ok=0, bad=0; const check=(label,cond,extra='')=>{ (cond?ok++:bad++); console
   check('playing tile is marked active', pads(gid('queue-grid').children[0])[1].className.includes('active'));
 }
 
+// ================= Startup splash: checks Spotify before the soundboard shows
+{ const devices=list=>()=>Promise.resolve({ok:true,status:200,json:async()=>({devices:list})});
+  const setup=(seed,fetchImpl)=>{ const env=makeEnv(seed); const timers=[];
+    env.sb.fetch=fetchImpl; env.sb.setTimeout=(f,ms)=>{timers.push({f,ms});return timers.length}; return {...env,timers}; };
+  { const {gid,run,timers}=setup({},devices([{id:'d1',name:'Rink Phone',is_active:true}]));
+    await run('runStartupCheck()');
+    check('splash: device found -> Connection successful!', gid('splash').className==='splash ok' && gid('splash').style.display==='flex' && gid('splash-msg').textContent==='Connection successful!', gid('splash-msg').textContent);
+    check('splash: names the device it will play on', gid('splash-detail').textContent==='Ready to play on Rink Phone');
+    const t=timers.find(x=>x.ms===1500);
+    check('splash: success stays up for 1.5 seconds', !!t && gid('splash').style.display==='flex');
+    t&&t.f(); check('splash: then opens the soundboard', gid('splash').style.display==='none' && gid('app-screen').style.display==='flex');
+  }
+  { const {gid,run,timers}=setup({},devices([]));
+    await run('runStartupCheck()');
+    check('splash: no device -> pauses and says to play a song in Spotify', gid('splash').className==='splash fail' && gid('splash').style.display==='flex' && /play any song/.test(gid('splash-detail').textContent) && !timers.some(x=>x.ms===1500), gid('splash-detail').textContent);
+    check('splash: main button offers to check again', gid('splash-primary').textContent==='Check again');
+    run('hideSplash()'); check('splash: Continue without Spotify gets past it', gid('splash').style.display==='none');
+  }
+  { const {gid,run}=setup({},()=>Promise.reject(new Error('offline')));
+    await run('runStartupCheck()');
+    check('splash: no signal -> pauses with a clear message', gid('splash').className==='splash fail' && gid('splash-msg').textContent==="Can't reach Spotify");
+  }
+  { const {gid,run}=setup({spotify_token_expiry:String(Date.now()-1000)},devices([{id:'d1',name:'x'}]));
+    await run('runStartupCheck()');
+    check('splash: expired sign-in -> offers Reconnect Spotify', gid('splash-msg').textContent==='Spotify sign-in expired' && gid('splash-primary').textContent==='Reconnect Spotify');
+  }
+  { const {gid,run,timers}=setup({spotify_device_id:'d2',spotify_device_name:'Booth iPad'},devices([{id:'d1',name:'Other',is_active:true},{id:'d2',name:'Booth iPad'}]));
+    await run('runStartupCheck()');
+    check('splash: prefers the pinned device', gid('splash-detail').textContent==='Ready to play on Booth iPad');
+  }
+}
+
 // ================= All-time most played (survives game resets)
 { const {sb,gid,run,store}=makeEnv();
   const [s1,s2]=run('window.SONGS').slice(0,2);

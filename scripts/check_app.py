@@ -37,6 +37,7 @@ LANDMARKS = {
     "track-modal-content": "fixed-size song picker",
     "chip-clear": "tag chip clear (X) button",
     "QUEUE_SLOTS": "soundboard tiles",
+    "runStartupCheck": "startup splash that checks the Spotify connection",
     "QUEUE_DECKS": "two-deck soundboard layout (Between whistles / Game moments)",
     "TAG_COLORS": "tag colours",
     "az-bar": "A-Z jump bar in the song picker",

@@ -35,6 +35,34 @@
         #login-screen { display: flex; }
         #app-screen { display: none; }
 
+        /* --- Startup splash: checks Spotify before the soundboard shows. Hidden by default
+           so a script failure can never leave it covering the app. --- */
+        .splash {
+            position: fixed; inset: 0; z-index: 900; background: #0e1116;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            gap: 14px; padding: 28px; text-align: center;
+        }
+        .splash-logo { width: 104px; height: 104px; border-radius: 26px; }
+        .splash-title { font-size: 1.35rem; font-weight: 700; margin-bottom: 14px; }
+        .splash-icon {
+            width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.9rem; font-weight: 800; line-height: 1;
+        }
+        .splash.checking .splash-icon { border: 4px solid #232737; border-top-color: #b7a6ff; animation: splash-spin 0.9s linear infinite; }
+        .splash.ok .splash-icon { background: #4fd98a; color: #0b0e13; }
+        .splash.ok .splash-icon::before { content: "✓"; }
+        .splash.fail .splash-icon { background: #3a2b0d; color: #ffc04a; }
+        .splash.fail .splash-icon::before { content: "!"; }
+        @keyframes splash-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .splash.checking .splash-icon { animation-duration: 2.4s; } }
+        .splash-msg { font-size: 1.3rem; font-weight: 700; }
+        .splash.ok .splash-msg { color: #4fd98a; }
+        .splash-detail { font-size: 0.98rem; line-height: 1.45; color: #8b93a3; max-width: 30ch; min-height: 2.9em; }
+        .splash-actions { display: none; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-top: 10px; }
+        .splash.fail .splash-actions { display: flex; }
+        .splash-btn { padding: 16px; font-size: 1.05rem; background: #1f2430; color: #f4f6fa; }
+        .splash-btn.primary { background: #4fd98a; color: #0b0e13; }
+
         /* --- Shared button base --- */
         button {
             border: none;
@@ -520,6 +548,18 @@
         </div>
     </div>
 
+    <div id="splash" class="splash" role="status" aria-live="polite">
+        <img class="splash-logo" src="icons/favicon-192.png?v=3" alt="">
+        <div class="splash-title">Hockey Soundboard</div>
+        <div class="splash-icon" aria-hidden="true"></div>
+        <div id="splash-msg" class="splash-msg">Checking Spotify…</div>
+        <div id="splash-detail" class="splash-detail"></div>
+        <div class="splash-actions">
+            <button id="splash-primary" class="splash-btn primary" onclick="splashPrimary()">Check again</button>
+            <button class="splash-btn" onclick="hideSplash()">Continue without Spotify</button>
+        </div>
+    </div>
+
     <div id="app-screen">
         <div class="pregame-row">
             <button id="pregame-btn-wild" class="sound-btn" onclick="playPregame('wild')" title="Wild pregame">
@@ -942,8 +982,107 @@
             document.getElementById('app-screen').style.display = 'flex';
             setSyncStatus('connected');
             startTokenWatch();
-            ensureFreshToken();
+            runStartupCheck();
         }
+
+        // --- STARTUP CHECK (splash) ---
+        // Before the soundboard shows, confirm Spotify is signed in and has a device ready
+        // to play on. Success shows "Connection successful!" for 1.5 seconds and then opens
+        // the soundboard. A problem keeps the splash up with what to do next; "Continue
+        // without Spotify" always gets past it (the pregame sounds work offline).
+        const SPLASH_OK_MS = 1500;
+        const SPLASH_TIMEOUT_MS = 6000;
+        const SPLASH_PROBLEMS = {
+            nodevice: { msg: "Spotify isn't ready", button: 'Check again',
+                detail: 'Open Spotify on your phone and play any song for a second, then come back here.' },
+            offline:  { msg: "Can't reach Spotify", button: 'Check again',
+                detail: 'Check your signal and try again. The pregame sounds still work offline.' },
+            auth:     { msg: 'Spotify sign-in expired', button: 'Reconnect Spotify',
+                detail: 'Tap Reconnect Spotify to sign in again.' }
+        };
+        let splashState = 'hidden'; // hidden | checking | ok | nodevice | offline | auth
+        let splashRun = 0;          // bumped by every new check or dismissal, so a stale result is ignored
+        let splashTimer = null;
+
+        function setSplash(state, msg, detail, button) {
+            const el = document.getElementById('splash');
+            if (!el) return;
+            splashState = state;
+            el.className = 'splash ' + (state === 'checking' || state === 'ok' ? state : 'fail');
+            el.style.display = 'flex';
+            document.getElementById('splash-msg').textContent = msg;
+            document.getElementById('splash-detail').textContent = detail || '';
+            if (button) document.getElementById('splash-primary').textContent = button;
+        }
+
+        function hideSplash() {
+            splashRun++;
+            if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
+            splashState = 'hidden';
+            const el = document.getElementById('splash');
+            if (el) el.style.display = 'none';
+        }
+
+        // -> { ok: true, device: 'name' } or { ok: false, reason: 'nodevice' | 'offline' | 'auth' }
+        async function checkSpotifyReady() {
+            if (!(await ensureFreshToken())) return { ok: false, reason: 'auth' };
+            const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, SPLASH_TIMEOUT_MS);
+            let res;
+            try {
+                res = await fetch('https://api.spotify.com/v1/me/player/devices', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    signal: ctrl ? ctrl.signal : undefined
+                });
+            } catch (e) {
+                return { ok: false, reason: 'offline' };
+            } finally {
+                clearTimeout(timer);
+            }
+            if (res.status === 401) return { ok: false, reason: 'auth' };
+            if (!res.ok) return { ok: false, reason: 'offline' };
+            let list = [];
+            try { const data = await res.json(); list = (data && data.devices) || []; } catch (e) { list = []; }
+            // Same choice playback makes: the pinned device if it is there, else the active one
+            const target = list.find(d => d.id === selectedDeviceId) || list.find(d => d.is_active) || list[0];
+            return target ? { ok: true, device: target.name || 'Spotify' } : { ok: false, reason: 'nodevice' };
+        }
+
+        async function runStartupCheck() {
+            const run = ++splashRun;
+            if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
+            try {
+                setSplash('checking', 'Checking Spotify…', '');
+                let result;
+                try { result = await checkSpotifyReady(); } catch (e) { result = { ok: false, reason: 'offline' }; }
+                if (run !== splashRun) return; // dismissed, or a newer check took over
+                if (result.ok) {
+                    setSplash('ok', 'Connection successful!', 'Ready to play on ' + result.device);
+                    splashTimer = setTimeout(hideSplash, SPLASH_OK_MS);
+                } else {
+                    const p = SPLASH_PROBLEMS[result.reason] || SPLASH_PROBLEMS.offline;
+                    setSplash(result.reason, p.msg, p.detail, p.button);
+                }
+            } catch (err) {
+                // Never let the splash trap the app: on any surprise, show the soundboard
+                console.error('Startup check failed:', err);
+                hideSplash();
+            }
+        }
+
+        // The splash's main button: sign in again when that is the problem, else re-check
+        async function splashPrimary() {
+            if (splashState === 'auth') {
+                await resyncSpotify(); // refreshes quietly if it can; otherwise leaves for the Spotify login page
+                if (!accessToken) return;
+            }
+            runStartupCheck();
+        }
+
+        // Coming back from the Spotify app re-checks by itself while the splash is waiting
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && ['nodevice', 'offline', 'auth'].indexOf(splashState) !== -1) runStartupCheck();
+        });
 
         // --- SPOTIFY TOKEN MANAGEMENT (silent refresh + status) ---
         let tokenWatchStarted = false;
